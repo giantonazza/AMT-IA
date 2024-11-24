@@ -76,7 +76,7 @@ const MainContent: React.FC<MainContentProps> = ({
               </DialogHeader>
               <PayPalButton onSuccess={(details) => {
                 console.log('Pago exitoso', details);
-                toast({
+                toast.toast({
                   title: "Suscripción exitosa",
                   description: "¡Gracias por suscribirte! Ahora tienes acceso ilimitado.",
                 });
@@ -217,7 +217,7 @@ export default function Home() {
     
     const input = inputRef.current.value.trim()
     if (!input) {
-      toast({
+      toast.toast({
         title: "Mensaje vacío",
         description: "Por favor, escribe un mensaje antes de enviar.",
         variant: "destructive",
@@ -226,7 +226,7 @@ export default function Home() {
     }
 
     if (freeMessages <= 0 && !isSubscribed) {
-      toast({
+      toast.toast({
         title: "Límite de mensajes alcanzado",
         description: "Has alcanzado el límite de mensajes gratuitos. Suscríbete para continuar.",
         variant: "destructive",
@@ -246,7 +246,7 @@ export default function Home() {
       setMessages(prev => [...prev, aiMessage])
     } catch (error) {
       console.error('Error:', error)
-      toast({
+      toast.toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Hubo un problema al procesar tu mensaje. Por favor, intenta de nuevo.",
         variant: "destructive",
@@ -312,5 +312,3 @@ export default function Home() {
     </PayPalScriptProvider>
   )
 }
-
-
