@@ -5,9 +5,14 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2, Search } from 'lucide-react'
 
+interface SearchResult {
+  title: string;
+  snippet: string;
+}
+
 export default function WebSearch() {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<any[]>([])
+  const [results, setResults] = useState<SearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSearch = async (e: React.FormEvent) => {

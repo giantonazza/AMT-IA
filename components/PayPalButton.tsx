@@ -1,7 +1,7 @@
 import { PayPalButtons } from "@paypal/react-paypal-js";
 
 interface PayPalButtonProps {
-  onSuccess: (details: any) => void;
+  onSuccess: (details: { id: string; status: string; payer: { email_address: string } }) => void;
 }
 
 export default function PayPalButton({ onSuccess }: PayPalButtonProps) {
@@ -28,5 +28,3 @@ export default function PayPalButton({ onSuccess }: PayPalButtonProps) {
     />
   );
 }
-
-

@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Este es un ejemplo simplificado. En una implementación real,
     // necesitarías verificar la transacción con PayPal y manejar la seguridad adecuadamente.
     
-    const { paymentId, payerEmail } = req.body;
+    const { payerEmail } = req.body;
     
     if (payerEmail === 'tonazzag@gmail.com') {
       // Actualizar el estado de suscripción en la base de datos
