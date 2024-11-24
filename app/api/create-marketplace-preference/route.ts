@@ -1,67 +1,49 @@
-'use client'
+import { NextResponse } from 'next/server'
+import mercadopago from 'mercadopago'
 
-import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import Script from 'next/script'
+mercadopago.configure({
+  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN || '',
+})
 
-declare global {
-  interface Window {
-    MercadoPago?: any;
-  }
-}
+export async function POST(req: Request) {
+  try {
+    const { productId, productTitle, productPrice } = await req.json()
 
-interface MarketplaceCheckoutProps {
-  productId: string;
-  productTitle: string;
-  productPrice: number;
-  onSuccess: () => void;
-}
-
-export default function MarketplaceCheckout({ productId, productTitle, productPrice, onSuccess }: MarketplaceCheckoutProps) {
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleCheckout = async () => {
-    setIsLoading(true)
-
-    try {
-      const response = await fetch('/api/create-marketplace-preference', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          productId,
-          productTitle,
-          productPrice,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.init_point) {
-        window.location.href = data.init_point
-        onSuccess()
-      } else {
-        throw new Error('No se pudo crear la preferencia de pago')
-      }
-    } catch (err) {
-      console.error('Error:', err)
-      // Aquí podrías mostrar un mensaje de error al usuario
-    } finally {
-      setIsLoading(false)
+    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+      throw new Error('MERCADOPAGO_ACCESS_TOKEN is not set')
     }
-  }
 
-  return (
-    <>
-      <Script
-        src="https://sdk.mercadopago.com/js/v2"
-        strategy="lazyOnload"
-      />
-      <Button onClick={handleCheckout} disabled={isLoading}>
-        {isLoading ? 'Procesando...' : 'Comprar ahora'}
-      </Button>
-    </>
-  )
+    const marketplaceCommission = (Number(process.env.MARKETPLACE_COMMISSION_PERCENTAGE) || 10) / 100
+
+    const preference = {
+      items: [
+        {
+          id: productId,
+          title: productTitle,
+          quantity: 1,
+          currency_id: 'UYU',
+          unit_price: productPrice,
+        }
+      ],
+      marketplace_fee: productPrice * marketplaceCommission,
+      back_urls: {
+        success: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
+        failure: `${process.env.NEXT_PUBLIC_BASE_URL}/failure`,
+        pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pending`,
+      },
+      auto_return: 'approved' as const,
+    }
+
+    const response = await mercadopago.preferences.create(preference)
+
+    return NextResponse.json({ 
+      init_point: response.body.init_point,
+      id: response.body.id
+    })
+  } catch (error: unknown) {
+    console.error('Error creating MercadoPago preference:', error)
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
+  }
 }
 
