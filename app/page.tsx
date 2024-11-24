@@ -25,9 +25,7 @@ interface MainContentProps {
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   messagesEndRef: React.RefObject<HTMLDivElement>;
-  toast: {
-    toast: (props: { title: string; description: string; variant?: "default" | "destructive" }) => void;
-  };
+  showToast: (props: { title: string; description: string; variant?: "default" | "destructive" }) => void;
   setFreeMessages: (value: number | ((prev: number) => number)) => void;
   setIsSubscribed: (value: boolean) => void;
 }
@@ -40,7 +38,7 @@ const MainContent: React.FC<MainContentProps> = ({
   handleSubmit,
   inputRef,
   messagesEndRef,
-  toast,
+  showToast,
   setFreeMessages,
   setIsSubscribed
 }) => {
@@ -76,7 +74,7 @@ const MainContent: React.FC<MainContentProps> = ({
               </DialogHeader>
               <PayPalButton onSuccess={(details) => {
                 console.log('Pago exitoso', details);
-                toast.toast({
+                showToast({
                   title: "Suscripción exitosa",
                   description: "¡Gracias por suscribirte! Ahora tienes acceso ilimitado.",
                 });
@@ -193,6 +191,10 @@ export default function Home() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const { toast } = useToast()
 
+  const showToast = (props: { title: string; description: string; variant?: "default" | "destructive" }) => {
+    toast(props)
+  }
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -217,7 +219,7 @@ export default function Home() {
     
     const input = inputRef.current.value.trim()
     if (!input) {
-      toast.toast({
+      showToast({
         title: "Mensaje vacío",
         description: "Por favor, escribe un mensaje antes de enviar.",
         variant: "destructive",
@@ -226,7 +228,7 @@ export default function Home() {
     }
 
     if (freeMessages <= 0 && !isSubscribed) {
-      toast.toast({
+      showToast({
         title: "Límite de mensajes alcanzado",
         description: "Has alcanzado el límite de mensajes gratuitos. Suscríbete para continuar.",
         variant: "destructive",
@@ -246,7 +248,7 @@ export default function Home() {
       setMessages(prev => [...prev, aiMessage])
     } catch (error) {
       console.error('Error:', error)
-      toast.toast({
+      showToast({
         title: "Error",
         description: error instanceof Error ? error.message : "Hubo un problema al procesar tu mensaje. Por favor, intenta de nuevo.",
         variant: "destructive",
@@ -303,7 +305,7 @@ export default function Home() {
             handleSubmit={handleSubmit}
             inputRef={inputRef}
             messagesEndRef={messagesEndRef}
-            toast={toast}
+            showToast={showToast}
             setFreeMessages={setFreeMessages}
             setIsSubscribed={setIsSubscribed}
           />
@@ -312,3 +314,4 @@ export default function Home() {
     </PayPalScriptProvider>
   )
 }
+
