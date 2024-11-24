@@ -22,15 +22,16 @@ export async function POST(req: Request) {
         failure: `${process.env.NEXT_PUBLIC_BASE_URL}/failure`,
         pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pending`,
       },
-      auto_return: 'approved',
+      auto_return: 'approved' as const,
     }
 
     const response = await mercadopago.preferences.create(preference)
 
     return NextResponse.json({ init_point: response.body.init_point })
-  } catch (error: any) {
-    console.error('Error creating MercadoPago preference:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error: unknown) {
+    console.error('Error creating MercadoPago preference:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

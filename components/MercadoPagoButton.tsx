@@ -29,11 +29,15 @@ export default function MercadoPagoButton({ onSuccess }: MercadoPagoButtonProps)
 
       if (data.init_point) {
         window.location.href = data.init_point
+        // Llamamos a onSuccess después de redirigir al usuario
+        onSuccess()
       } else {
         throw new Error('No se pudo crear la preferencia de pago')
       }
     } catch (err) {
       console.error('Error:', err)
+      // Aquí podrías mostrar un mensaje de error al usuario
+    } finally {
       setIsLoading(false)
     }
   }

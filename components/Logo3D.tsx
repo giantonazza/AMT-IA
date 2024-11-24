@@ -5,7 +5,7 @@ import * as THREE from 'three'
 
 function AnimatedText() {
   const meshRef = useRef<THREE.Mesh>(null!)
-  
+
   useFrame((state) => {
     const time = state.clock.getElapsedTime()
     meshRef.current.rotation.x = Math.sin(time / 4)

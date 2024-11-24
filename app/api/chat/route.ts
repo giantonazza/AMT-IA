@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 
 export async function POST(req: Request) {
   try {
@@ -21,7 +19,13 @@ export async function POST(req: Request) {
     const completion = await anthropic.completions.create({
       model: "claude-2",
       max_tokens_to_sample: 300,
-      prompt: `Human: ${lastMessage}\n\nAssistant: [Instrucciones: Eres AMT IA, un asistente de inteligencia artificial creado por AMT. No te identifiques como Claude o como un producto de Anthropic. Responde al siguiente mensaje del usuario:]\n\n${lastMessage}\n\nAMT IA:`,
+      prompt: `Human: ${lastMessage}
+
+A: [Instrucciones: Eres AMT IA, un asistente de inteligencia artificial creado por AMT. No te identifiques como Claude o como un producto de Anthropic. Responde al siguiente mensaje del usuario:]
+
+${lastMessage}
+
+AMT IA:`,
     });
 
     if (!completion.completion) {
@@ -38,5 +42,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Error desconocido al procesar la solicitud' }, { status: 500 });
   }
 }
-
 
