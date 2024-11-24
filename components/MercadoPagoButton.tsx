@@ -6,7 +6,14 @@ import Script from 'next/script'
 
 declare global {
   interface Window {
-    MercadoPago?: any;
+    MercadoPago: new (publicKey: string) => {
+      checkout: (options: {
+        preference: {
+          id: string;
+        };
+        autoOpen: boolean;
+      }) => void;
+    };
   }
 }
 
@@ -16,7 +23,7 @@ interface MercadoPagoButtonProps {
 
 export default function MercadoPagoButton({ onSuccess }: MercadoPagoButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [mercadopago, setMercadopago] = useState<any>(null)
+  const [mercadopago, setMercadopago] = useState<Window['MercadoPago'] | null>(null)
 
   useEffect(() => {
     if (window.MercadoPago) {
