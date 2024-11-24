@@ -8,14 +8,8 @@ import { useToast } from "@/components/ui/use-toast"
 import { ToastProvider, ToastViewport } from "@/components/ui/toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { chatWithAI } from '@/lib/anthropic'
-import dynamic from 'next/dynamic'
 import LoadingDots from '@/components/LoadingDots'
-
-const PayPalScriptProvider = dynamic(
-  () => import('@paypal/react-paypal-js').then(mod => mod.PayPalScriptProvider),
-  { ssr: false }
-)
-const PayPalButton = dynamic(() => import('@/components/PayPalButton'), { ssr: false })
+import MercadoPagoButton from '@/components/MercadoPagoButton'
 
 interface MainContentProps {
   messages: { role: string; content: string }[];
@@ -72,8 +66,7 @@ const MainContent: React.FC<MainContentProps> = ({
                   Obtén acceso ilimitado a AMT IA por solo $9.99 al mes.
                 </DialogDescription>
               </DialogHeader>
-              <PayPalButton onSuccess={(details) => {
-                console.log('Pago exitoso', details);
+              <MercadoPagoButton onSuccess={() => {
                 showToast({
                   title: "Suscripción exitosa",
                   description: "¡Gracias por suscribirte! Ahora tienes acceso ilimitado.",
@@ -260,58 +253,57 @@ export default function Home() {
   }
 
   return (
-    <PayPalScriptProvider options={{ "client-id": "Ad0W2q249Ro1B4a-zGnYkRjL6rc5KWQHx0aK0Ub1L3HsAM7i_akN8DqcLLGQW8Kjl2rv4LKz-pwOcgTT" }}>
-      <ToastProvider>
-        {showWelcome ? (
-          <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-100 p-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-center"
+    <ToastProvider>
+      {showWelcome ? (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-100 p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0
+}}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
+            <h1 className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+              Bienvenido a AMT IA
+            </h1>
+            <p className="mb-8 max-w-md mx-auto">
+              Con AMT IA, puedes conversar sobre cualquier tema, obtener respuestas a tus preguntas,
+              y explorar nuevas ideas. Además, te ayudamos con:
+            </p>
+            <ul className="list-disc text-left mb-8 max-w-md mx-auto">
+              <li>Estrategias para tus negocios y emprendimientos</li>
+              <li>Planificación y seguimiento de rutinas de ejercicio</li>
+              <li>Consejos para mejorar tu productividad</li>
+              <li>Análisis de datos y tendencias de mercado</li>
+              <li>Generación de ideas creativas para proyectos</li>
+              <li>Asistencia en la toma de decisiones importantes</li>
+            </ul>
+            <p className="mb-8">
+              ¡Comienza tu aventura ahora con 6 mensajes gratuitos!
+            </p>
+            <Button 
+              onClick={() => setShowWelcome(false)}
+              className="bg-purple-600 hover:bg-purple-700"
             >
-              <h1 className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-                Bienvenido a AMT IA
-              </h1>
-              <p className="mb-8 max-w-md mx-auto">
-                Con AMT IA, puedes conversar sobre cualquier tema, obtener respuestas a tus preguntas,
-                y explorar nuevas ideas. Además, te ayudamos con:
-              </p>
-              <ul className="list-disc text-left mb-8 max-w-md mx-auto">
-                <li>Estrategias para tus negocios y emprendimientos</li>
-                <li>Planificación y seguimiento de rutinas de ejercicio</li>
-                <li>Consejos para mejorar tu productividad</li>
-                <li>Análisis de datos y tendencias de mercado</li>
-                <li>Generación de ideas creativas para proyectos</li>
-                <li>Asistencia en la toma de decisiones importantes</li>
-              </ul>
-              <p className="mb-8">
-                ¡Comienza tu aventura ahora con 6 mensajes gratuitos!
-              </p>
-              <Button 
-                onClick={() => setShowWelcome(false)}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                Comenzar a chatear <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </motion.div>
-          </div>
-        ) : (
-          <MainContent 
-            messages={messages}
-            isLoading={isLoading}
-            freeMessages={freeMessages}
-            isSubscribed={isSubscribed}
-            handleSubmit={handleSubmit}
-            inputRef={inputRef}
-            messagesEndRef={messagesEndRef}
-            showToast={showToast}
-            setFreeMessages={setFreeMessages}
-            setIsSubscribed={setIsSubscribed}
-          />
-        )}
-      </ToastProvider>
-    </PayPalScriptProvider>
+              Comenzar a chatear <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </motion.div>
+        </div>
+      ) : (
+        <MainContent 
+          messages={messages}
+          isLoading={isLoading}
+          freeMessages={freeMessages}
+          isSubscribed={isSubscribed}
+          handleSubmit={handleSubmit}
+          inputRef={inputRef}
+          messagesEndRef={messagesEndRef}
+          showToast={showToast}
+          setFreeMessages={setFreeMessages}
+          setIsSubscribed={setIsSubscribed}
+        />
+      )}
+    </ToastProvider>
   )
 }
 
