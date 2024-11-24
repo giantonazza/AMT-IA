@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import Script from 'next/script'
 
@@ -10,48 +10,36 @@ declare global {
   }
 }
 
-interface MercadoPagoButtonProps {
-  onSuccess: () => void
+interface MarketplaceCheckoutProps {
+  productId: string;
+  productTitle: string;
+  productPrice: number;
+  onSuccess: () => void;
 }
 
-export default function MercadoPagoButton({ onSuccess }: MercadoPagoButtonProps) {
+export default function MarketplaceCheckout({ productId, productTitle, productPrice, onSuccess }: MarketplaceCheckoutProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [mercadopago, setMercadopago] = useState<any>(null)
-
-  useEffect(() => {
-    if (window.MercadoPago) {
-      setMercadopago(new window.MercadoPago(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY))
-    }
-  }, [])
 
   const handleCheckout = async () => {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/create-mercadopago-preference', {
+      const response = await fetch('/api/create-marketplace-preference', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          price: 9.99,
-          description: 'Suscripción a AMT IA',
+          productId,
+          productTitle,
+          productPrice,
         }),
       })
 
       const data = await response.json()
 
       if (data.init_point) {
-        if (mercadopago) {
-          mercadopago.checkout({
-            preference: {
-              id: data.id
-            },
-            autoOpen: true,
-          });
-        } else {
-          window.location.href = data.init_point
-        }
+        window.location.href = data.init_point
         onSuccess()
       } else {
         throw new Error('No se pudo crear la preferencia de pago')
@@ -71,7 +59,7 @@ export default function MercadoPagoButton({ onSuccess }: MercadoPagoButtonProps)
         strategy="lazyOnload"
       />
       <Button onClick={handleCheckout} disabled={isLoading}>
-        {isLoading ? 'Procesando...' : 'Pagar con MercadoPago'}
+        {isLoading ? 'Procesando...' : 'Comprar ahora'}
       </Button>
     </>
   )

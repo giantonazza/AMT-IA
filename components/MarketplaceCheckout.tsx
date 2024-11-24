@@ -1,26 +1,35 @@
 import { NextResponse } from 'next/server'
 import mercadopago from 'mercadopago'
-
-mercadopago.configure({
-  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN || '',
-})
+import { getVendorCredentials } from '@/lib/database' // Asume que tienes una función para obtener las credenciales del vendedor
 
 export async function POST(req: Request) {
   try {
-    const { price, description } = await req.json()
+    const { productId, productTitle, productPrice, vendorId } = await req.json()
 
-    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
-      throw new Error('MERCADOPAGO_ACCESS_TOKEN is not set')
+    // Obtener las credenciales del vendedor desde tu base de datos
+    const vendorCredentials = await getVendorCredentials(vendorId)
+
+    if (!vendorCredentials) {
+      throw new Error('Vendor credentials not found')
     }
+
+    mercadopago.configure({
+      access_token: vendorCredentials.access_token,
+    })
+
+    const marketplaceCommission = (Number(process.env.MARKETPLACE_COMMISSION_PERCENTAGE) || 10) / 100
 
     const preference = {
       items: [
         {
-          title: description,
-          unit_price: price,
+          id: productId,
+          title: productTitle,
           quantity: 1,
+          currency_id: 'UYU',
+          unit_price: productPrice,
         }
       ],
+      marketplace_fee: productPrice * marketplaceCommission,
       back_urls: {
         success: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
         failure: `${process.env.NEXT_PUBLIC_BASE_URL}/failure`,
