@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import mercadopago from 'mercadopago'
+import prisma from '@/lib/prisma'
 
 mercadopago.configure({
   access_token: process.env.MERCADOPAGO_ACCESS_TOKEN || '',
@@ -36,6 +37,17 @@ export async function POST(req: Request) {
 
     const response = await mercadopago.preferences.create(preference)
 
+    // Create a transaction record
+    await prisma.transaction.create({
+      data: {
+        userId: 'system', // You should replace this with actual user ID when you have authentication
+        amount: productPrice,
+        status: 'PENDING',
+        paymentMethod: 'mercadopago',
+        mercadoPagoId: response.body.id
+      }
+    })
+
     return NextResponse.json({ 
       init_point: response.body.init_point,
       id: response.body.id
@@ -46,4 +58,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
+
 
