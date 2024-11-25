@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 
+declare global {
+  let prisma: PrismaClient | undefined;
+}
+
 let prisma: PrismaClient
 
 if (process.env.NODE_ENV === 'production') {
@@ -12,4 +16,5 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 export default prisma
+
 

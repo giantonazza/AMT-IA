@@ -18,7 +18,6 @@ export async function POST() {
           title: 'Suscripción Premium AMT IA',
           unit_price: 9.99,
           quantity: 1,
-          currency_id: 'USD',
         }
       ],
       back_urls: {
@@ -27,8 +26,6 @@ export async function POST() {
         pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pending`,
       },
       auto_return: 'approved' as const,
-      statement_descriptor: 'AMT IA Subscription',
-      external_reference: `AMT-IA-${Date.now()}`,
     };
 
     const response = await MercadoPago.preferences.create(preference);

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from "@/components/ui/button"
 import { Loader2, Send, Bot, User, ArrowRight, Info } from 'lucide-react'
@@ -22,6 +22,7 @@ interface MainContentProps {
   showToast: (props: { title: string; description: string; variant?: "default" | "destructive" }) => void;
   setFreeMessages: (value: number | ((prev: number) => number)) => void;
   setIsSubscribed: (value: boolean) => void;
+  preferenceId: string | null;
 }
 
 const MainContent: React.FC<MainContentProps> = ({
@@ -34,7 +35,8 @@ const MainContent: React.FC<MainContentProps> = ({
   messagesEndRef,
   showToast,
   setFreeMessages,
-  setIsSubscribed
+  setIsSubscribed,
+  preferenceId
 }) => {
   const [showTips, setShowTips] = useState(false);
 
@@ -63,17 +65,20 @@ const MainContent: React.FC<MainContentProps> = ({
               <DialogHeader>
                 <DialogTitle>Suscríbete a AMT IA</DialogTitle>
                 <DialogDescription>
-                  Obtén acceso ilimitado a AMT IA por solo $9.99 al mes.
+                  Obtén acceso ilimitado a AMT IA por solo $10 al mes.
                 </DialogDescription>
               </DialogHeader>
-              <MercadoPagoButton onSuccess={() => {
-                showToast({
-                  title: "Suscripción exitosa",
-                  description: "¡Gracias por suscribirte! Ahora tienes acceso ilimitado.",
-                });
-                setFreeMessages(Infinity);
-                setIsSubscribed(true);
-              }} />
+              <MercadoPagoButton 
+                onSuccess={() => {
+                  showToast({
+                    title: "Suscripción exitosa",
+                    description: "¡Gracias por suscribirte! Ahora tienes acceso ilimitado.",
+                  });
+                  setFreeMessages(Infinity);
+                  setIsSubscribed(true);
+                }}
+                preferenceId={preferenceId || ""}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -180,13 +185,14 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [freeMessages, setFreeMessages] = useState(6)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const { toast } = useToast()
 
-  const showToast = (props: { title: string; description: string; variant?: "default" | "destructive" }) => {
+  const showToast = useCallback((props: { title: string; description: string; variant?: "default" | "destructive" }) => {
     toast(props)
-  }
+  }, [toast])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -205,6 +211,31 @@ export default function Home() {
       setMessages([])
     }
   }, [isSubscribed, freeMessages])
+
+  useEffect(() => {
+    const fetchPreferenceId = async () => {
+      try {
+        const response = await fetch('/api/create-mercadopago-preference', {
+          method: 'POST',
+        });
+        const data = await response.json();
+        if (data.id) {
+          setPreferenceId(data.id);
+        } else {
+          throw new Error('No se pudo obtener el preferenceId');
+        }
+      } catch (error) {
+        console.error('Error al obtener el preferenceId:', error);
+        showToast({
+          title: "Error",
+          description: "No se pudo iniciar el proceso de pago. Por favor, intente nuevamente.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchPreferenceId();
+  }, [showToast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -258,8 +289,7 @@ export default function Home() {
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-100 p-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0
-}}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="text-center"
           >
@@ -301,9 +331,11 @@ export default function Home() {
           showToast={showToast}
           setFreeMessages={setFreeMessages}
           setIsSubscribed={setIsSubscribed}
+          preferenceId={preferenceId}
         />
       )}
     </ToastProvider>
   )
 }
+
 
