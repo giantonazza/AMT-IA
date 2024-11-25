@@ -6,7 +6,16 @@ import Script from 'next/script'
 
 declare global {
   interface Window {
-    MercadoPago?: any;
+    MercadoPago?: {
+      new (publicKey: string): {
+        checkout: (options: {
+          preference: {
+            id: string;
+          };
+          autoOpen: boolean;
+        }) => void;
+      };
+    };
   }
 }
 
