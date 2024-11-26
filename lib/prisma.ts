@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 
+// Extendemos el tipo del objeto global
 declare global {
-  let prisma: PrismaClient | undefined;
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined
 }
 
 let prisma: PrismaClient
