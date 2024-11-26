@@ -1,41 +1,47 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/auth"
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
-export async function POST() {
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions)
+
+  if (!session) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  }
+
   try {
-    const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-    if (!accessToken) {
-      throw new Error('MERCADOPAGO_ACCESS_TOKEN is not defined');
-    }
+    const body = await req.json()
+    const { title, price, quantity } = body
 
-    const client = new MercadoPagoConfig({ accessToken });
-
+    // Configurar MercadoPago
+    const client = new MercadoPagoConfig({ accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN as string });
     const preference = new Preference(client);
+
     const preferenceData = {
       items: [
         {
-          title: 'Suscripción Premium AMT IA',
-          unit_price: 9.99,
-          quantity: 1,
-          currency_id: 'USD',
-        }
+          title: title as string,
+          unit_price: Number(price),
+          quantity: Number(quantity),
+          currency_id: "ARS", // Asumiendo que la moneda es Peso Argentino, ajusta según sea necesario
+        },
       ],
       back_urls: {
-        success: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
-        failure: `${process.env.NEXT_PUBLIC_BASE_URL}/failure`,
-        pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pending`,
+        success: `${process.env.NEXTAUTH_URL}/subscription/success`,
+        failure: `${process.env.NEXTAUTH_URL}/subscription/failure`,
+        pending: `${process.env.NEXTAUTH_URL}/subscription/pending`,
       },
-      auto_return: 'approved' as const,
-      statement_descriptor: 'AMT IA Subscription',
-      external_reference: `AMT-IA-${Date.now()}`,
-    };
+      auto_return: "approved" as const,
+    }
 
-    const response = await preference.create({ body: preferenceData });
+    const response = await preference.create({ body: preferenceData })
 
-    return NextResponse.json({ id: response.id });
+    return NextResponse.json({ preferenceId: response.id })
   } catch (error) {
-    console.error('Error creating MercadoPago preference:', error);
-    return NextResponse.json({ error: 'Error creating preference' }, { status: 500 });
+    console.error('Error al crear la preferencia de MercadoPago:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
+
 

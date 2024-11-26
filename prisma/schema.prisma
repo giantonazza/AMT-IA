@@ -16,6 +16,8 @@ model User {
   updatedAt         DateTime  @updatedAt
   role              Role      @default(USER)
   mercadoPagoVendorId String?
+  isSubscribed      Boolean   @default(false)
+  subscriptionId    String?
   transactions      Transaction[]
   chatSessions      ChatSession[]
 }

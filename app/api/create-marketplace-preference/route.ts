@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Preference } from 'mercadopago'
 import prisma from '@/lib/prisma'
 
 const client = new MercadoPagoConfig({
   accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || '',
-});
+})
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     const marketplaceCommission = (Number(process.env.MARKETPLACE_COMMISSION_PERCENTAGE) || 10) / 100
 
-    const preference = new Preference(client);
+    const preference = new Preference(client)
     const preferenceData = {
       items: [
         {
@@ -24,25 +24,25 @@ export async function POST(req: Request) {
           title: productTitle,
           quantity: 1,
           currency_id: 'UYU',
-          unit_price: Number(productPrice),
+          unit_price: productPrice,
         }
       ],
-      marketplace_fee: Number(productPrice) * marketplaceCommission,
+      marketplace_fee: productPrice * marketplaceCommission,
       back_urls: {
-        success: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
-        failure: `${process.env.NEXT_PUBLIC_BASE_URL}/failure`,
-        pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pending`,
+        success: `https://amt-ia.vercel.app/success`,
+        failure: `https://amt-ia.vercel.app/failure`,
+        pending: `https://amt-ia.vercel.app/pending`,
       },
       auto_return: 'approved' as const,
     }
 
-    const response = await preference.create({ body: preferenceData });
+    const response = await preference.create({ body: preferenceData })
 
     // Create a transaction record
     await prisma.transaction.create({
       data: {
         userId: 'system', // You should replace this with actual user ID when you have authentication
-        amount: Number(productPrice),
+        amount: productPrice,
         status: 'PENDING',
         paymentMethod: 'mercadopago',
         mercadoPagoId: response.id
