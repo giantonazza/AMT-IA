@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import MercadoPago from 'mercadopago';
+import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 export async function POST() {
   try {
@@ -8,16 +8,16 @@ export async function POST() {
       throw new Error('MERCADOPAGO_ACCESS_TOKEN is not defined');
     }
 
-    MercadoPago.configure({
-      access_token: accessToken
-    });
+    const client = new MercadoPagoConfig({ accessToken });
 
-    const preference = {
+    const preference = new Preference(client);
+    const preferenceData = {
       items: [
         {
           title: 'Suscripción Premium AMT IA',
           unit_price: 9.99,
           quantity: 1,
+          currency_id: 'USD',
         }
       ],
       back_urls: {
@@ -26,16 +26,19 @@ export async function POST() {
         pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pending`,
       },
       auto_return: 'approved' as const,
+      statement_descriptor: 'AMT IA Subscription',
+      external_reference: `AMT-IA-${Date.now()}`,
     };
 
-    const response = await MercadoPago.preferences.create(preference);
+    const response = await preference.create({ body: preferenceData });
 
-    return NextResponse.json({ id: response.body.id });
+    return NextResponse.json({ id: response.id });
   } catch (error) {
     console.error('Error creating MercadoPago preference:', error);
     return NextResponse.json({ error: 'Error creating preference' }, { status: 500 });
   }
 }
+
 
 
 

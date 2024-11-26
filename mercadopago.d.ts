@@ -4,6 +4,7 @@ declare module 'mercadopago' {
       title: string;
       unit_price: number;
       quantity: number;
+      currency_id: string;
     }>;
     back_urls: {
       success: string;
@@ -11,15 +12,21 @@ declare module 'mercadopago' {
       pending: string;
     };
     auto_return: 'approved' | 'all';
+    statement_descriptor?: string;
+    external_reference?: string;
   }
 
-  interface MercadoPago {
-    configure: (options: { access_token: string }) => void;
-    preferences: {
-      create: (preference: CreatePreferencePayload) => Promise<any>;
-    };
+  export class MercadoPagoConfig {
+    constructor(options: { accessToken: string });
   }
 
-  const mercadopago: MercadoPago;
-  export default mercadopago;
+  export class Preference {
+    constructor(client: MercadoPagoConfig);
+    create(data: { body: CreatePreferencePayload }): Promise<{
+      id: string;
+      init_point: string;
+      sandbox_init_point: string;
+    }>;
+  }
 }
+

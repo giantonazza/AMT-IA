@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import mercadopago from 'mercadopago'
+import { MercadoPagoConfig, Preference } from 'mercadopago';
 import prisma from '@/lib/prisma'
 
-mercadopago.configure({
-  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN || '',
-})
+const client = new MercadoPagoConfig({
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || '',
+});
 
 export async function POST(req: Request) {
   try {
@@ -16,17 +16,18 @@ export async function POST(req: Request) {
 
     const marketplaceCommission = (Number(process.env.MARKETPLACE_COMMISSION_PERCENTAGE) || 10) / 100
 
-    const preference = {
+    const preference = new Preference(client);
+    const preferenceData = {
       items: [
         {
           id: productId,
           title: productTitle,
           quantity: 1,
           currency_id: 'UYU',
-          unit_price: productPrice,
+          unit_price: Number(productPrice),
         }
       ],
-      marketplace_fee: productPrice * marketplaceCommission,
+      marketplace_fee: Number(productPrice) * marketplaceCommission,
       back_urls: {
         success: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
         failure: `${process.env.NEXT_PUBLIC_BASE_URL}/failure`,
@@ -35,22 +36,22 @@ export async function POST(req: Request) {
       auto_return: 'approved' as const,
     }
 
-    const response = await mercadopago.preferences.create(preference)
+    const response = await preference.create({ body: preferenceData });
 
     // Create a transaction record
     await prisma.transaction.create({
       data: {
         userId: 'system', // You should replace this with actual user ID when you have authentication
-        amount: productPrice,
+        amount: Number(productPrice),
         status: 'PENDING',
         paymentMethod: 'mercadopago',
-        mercadoPagoId: response.body.id
+        mercadoPagoId: response.id
       }
     })
 
     return NextResponse.json({ 
-      init_point: response.body.init_point,
-      id: response.body.id
+      init_point: response.init_point,
+      id: response.id
     })
   } catch (error: unknown) {
     console.error('Error creating MercadoPago preference:', error)
