@@ -1,31 +1,63 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Button } from "@/components/ui/button"
-import { Loader2, Send, Bot, User, ArrowRight, Info } from 'lucide-react'
-import { useToast } from "@/components/ui/use-toast"
-import { ToastProvider, ToastViewport } from "@/components/ui/toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
-import { chatWithAI } from '@/lib/anthropic'
-import LoadingDots from '@/components/LoadingDots'
-import MercadoPagoButton from '@/components/MercadoPagoButton'
+import { ArrowRight, Send, Sparkles, User, Bot } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { useToast } from '@/components/ui/use-toast'
+import { ToastProvider, ToastViewport } from '@/components/ui/toast'
+import MercadoPagoCheckout from '@/components/MercadoPagoCheckout'
+import { ExpectationWindow } from '@/components/ExpectationWindow'
 
-interface MainContentProps {
-  messages: { role: string; content: string }[];
-  isLoading: boolean;
-  freeMessages: number;
-  isSubscribed: boolean;
-  handleSubmit: (e: React.FormEvent) => Promise<void>;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
-  showToast: (props: { title: string; description: string; variant?: "default" | "destructive" }) => void;
-  setFreeMessages: (value: number | ((prev: number) => number)) => void;
-  setIsSubscribed: (value: boolean) => void;
-  preferenceId: string | null;
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
 }
 
-const MainContent: React.FC<MainContentProps> = ({
+function UserPoints({ points }: { points: number }) {
+  return (
+    <div className="text-sm text-gray-300 flex items-center">
+      <Sparkles className="w-4 h-4 mr-1 text-yellow-400" />
+      <span className="font-bold">{points}</span> puntos
+    </div>
+  )
+}
+
+function ChatMessage({ message, isLast }: { message: Message; isLast: boolean }) {
+  const isUser = message.role === 'user'
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
+    >
+      <div className={`flex items-start ${isUser ? 'flex-row-reverse' : ''} max-w-[80%]`}>
+        <div className={`flex-shrink-0 ${isUser ? 'ml-3' : 'mr-3'}`}>
+          {isUser ? (
+            <User className="w-8 h-8 text-purple-400" />
+          ) : (
+            <Bot className="w-8 h-8 text-pink-400" />
+          )}
+        </div>
+        <div
+          className={`p-4 rounded-2xl ${
+            isUser
+              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+              : 'bg-gray-800 text-gray-100'
+          }`}
+        >
+          {message.content}
+        </div>
+      </div>
+      {isLast && <div className="h-16" />} {/* Add extra space after the last message */}
+    </motion.div>
+  )
+}
+
+function MainContent({
   messages,
   isLoading,
   freeMessages,
@@ -33,172 +65,112 @@ const MainContent: React.FC<MainContentProps> = ({
   handleSubmit,
   inputRef,
   messagesEndRef,
-  showToast,
-  setFreeMessages,
-  setIsSubscribed,
-  preferenceId
-}) => {
-  const [showTips, setShowTips] = useState(false);
-
+  userPoints,
+  handleSubscribe,
+  expectationTopic,
+}: {
+  messages: Message[]
+  isLoading: boolean
+  freeMessages: number
+  isSubscribed: boolean
+  handleSubmit: (e: React.FormEvent) => Promise<void>
+  inputRef: React.RefObject<HTMLInputElement>
+  messagesEndRef: React.RefObject<HTMLDivElement>
+  userPoints: number
+  handleSubscribe: () => void
+  expectationTopic: string
+}) {
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-gray-100">
-      <header className="bg-gray-800 p-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-          AMT IA
-        </h1>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowTips(!showTips)}
-            className="text-gray-300 hover:text-white"
-          >
-            <Info className="h-5 w-5" />
-          </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="bg-gray-700 hover:bg-gray-600 text-gray-100">
-                Suscribirse
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-gray-800 text-gray-100">
-              <DialogHeader>
-                <DialogTitle>Suscríbete a AMT IA</DialogTitle>
-                <DialogDescription>
-                  Obtén acceso ilimitado a AMT IA por solo $10 al mes.
-                </DialogDescription>
-              </DialogHeader>
-              <MercadoPagoButton 
-                onSuccess={() => {
-                  showToast({
-                    title: "Suscripción exitosa",
-                    description: "¡Gracias por suscribirte! Ahora tienes acceso ilimitado.",
-                  });
-                  setFreeMessages(Infinity);
-                  setIsSubscribed(true);
-                }}
-                preferenceId={preferenceId || ""}
-              />
-            </DialogContent>
-          </Dialog>
+    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 to-purple-900 text-gray-100">
+      <header className="flex items-center justify-between p-4 bg-black bg-opacity-50 backdrop-blur-md">
+        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">AMT IA Chat</h1>
+        <div className="flex items-center space-x-4">
+          <UserPoints points={userPoints} />
+          {!isSubscribed && (
+            <Button
+              onClick={handleSubscribe}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105"
+            >
+              Suscribirse
+            </Button>
+          )}
         </div>
       </header>
-      <div className="flex-grow overflow-auto p-4 space-y-4">
-        {showTips && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-gray-800 p-4 rounded-lg shadow-lg"
-          >
-            <h3 className="font-bold mb-2">Consejos para interactuar con AMT IA:</h3>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Sé específico en tus preguntas para obtener respuestas más precisas.</li>
-              <li>Puedes hacer preguntas de seguimiento para profundizar en un tema.</li>
-              <li>AMT IA puede ayudarte con una variedad de temas, ¡no dudes en preguntar!</li>
-              <li>Si necesitas aclaraciones, simplemente pídelas.</li>
-            </ul>
-          </motion.div>
-        )}
-        <AnimatePresence>
-          {messages.map((message, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`p-3 rounded-lg max-w-[80%] ${
-                message.role === 'user' 
-                  ? 'bg-purple-600 text-white' 
-                  : 'bg-gray-700 text-gray-100'
-              }`}>
-                <div className="flex items-center mb-1">
-                  {message.role === 'user' ? (
-                    <User className="w-4 h-4 mr-2" />
-                  ) : (
-                    <Bot className="w-4 h-4 mr-2" />
-                  )}
-                  <span className="font-semibold">{message.role === 'user' ? 'Tú' : 'AMT IA'}</span>
-                </div>
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="p-3 rounded-lg bg-gray-700 text-gray-100">
-              <div className="flex items-center mb-1">
-                <Bot className="w-4 h-4 mr-2" />
-                <span className="font-semibold">AMT IA</span>
-              </div>
-              <LoadingDots />
+      <main className="flex-grow overflow-hidden p-4">
+        <Card className="bg-black bg-opacity-50 backdrop-blur-md border-none h-full rounded-2xl overflow-hidden">
+          <CardContent className="p-0 h-full flex flex-col">
+            <div className="flex-grow overflow-y-auto p-4 space-y-4">
+              {messages.map((message, index) => (
+                <ChatMessage key={index} message={message} isLast={index === messages.length - 1} />
+              ))}
+              <div ref={messagesEndRef} />
             </div>
+            <div className="p-4 bg-black bg-opacity-50 backdrop-blur-md">
+              <form onSubmit={handleSubmit} className="flex space-x-2">
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Escribe tu mensaje..."
+                  className="flex-grow bg-gray-800 text-white border-gray-700 rounded-full py-2 px-4 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={isLoading || (!isSubscribed && freeMessages <= 0)}
+                />
+                <Button
+                  type="submit"
+                  disabled={isLoading || (!isSubscribed && freeMessages <= 0)}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-full p-2 transition-all duration-300 transform hover:scale-105"
+                >
+                  <Send className="w-5 h-5" />
+                </Button>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+      <footer className="p-4 bg-black bg-opacity-50 backdrop-blur-md">
+        <div className="flex justify-between items-center">
+          {!isSubscribed && (
+            <p className="text-sm text-gray-400">
+              Mensajes gratuitos restantes: <span className="font-bold text-purple-400">{freeMessages}</span>
+            </p>
+          )}
+          <div className="text-center text-gray-400 text-xs">
+            Creado por Giancarlo Tonazza, Uruguay |{' '}
+            <a
+              href="https://instagram.com/giantonazza"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-purple-400 transition-colors duration-300"
+            >
+              Instagram
+            </a>
           </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      <footer className="bg-gray-800 p-4">
-        <form onSubmit={handleSubmit} className="flex items-center space-x-2">
-          <textarea
-            ref={inputRef}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-            className="flex-grow bg-gray-700 text-gray-100 placeholder-gray-400 border-gray-600 focus:border-purple-500 rounded-md p-2 resize-none"
-            placeholder="Escribe tu mensaje..."
-            disabled={isLoading || (freeMessages <= 0 && !isSubscribed)}
-            rows={1}
-            style={{ minHeight: '40px', maxHeight: '120px' }}
-          />
-          <Button type="submit" disabled={isLoading || (freeMessages <= 0 && !isSubscribed)} className="bg-purple-600 hover:bg-purple-700">
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </Button>
-        </form>
-        {!isSubscribed && (
-          <p className="text-xs text-gray-400 mt-2 text-center">
-            {freeMessages > 0 ? `Te quedan ${freeMessages} mensajes gratuitos` : 'Has agotado tus mensajes gratuitos. Suscríbete para continuar.'}
-          </p>
-        )}
+        </div>
       </footer>
-      <div className="text-center text-gray-400 text-xs py-2 bg-gray-800">
-        created by giantonazza, Uruguay | <a href="https://instagram.com/giantonazza" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400">Instagram</a>
-      </div>
       <ToastViewport />
+      <ExpectationWindow topic={expectationTopic} isVisible={isLoading} />
     </div>
   )
 }
 
 export default function Home() {
   const [showWelcome, setShowWelcome] = useState(true)
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [freeMessages, setFreeMessages] = useState(6)
   const [isSubscribed, setIsSubscribed] = useState(false)
-  const [preferenceId, setPreferenceId] = useState<string | null>(null);
+  const [userPoints, setUserPoints] = useState<number>(0)
+  const [expectationTopic, setExpectationTopic] = useState<string>('')
+  const [showCheckout, setShowCheckout] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
-  const showToast = useCallback((props: { title: string; description: string; variant?: "default" | "destructive" }) => {
-    toast(props)
-  }, [toast])
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  useEffect(scrollToBottom, [messages])
+  const showToast = useCallback(
+    (props: { title: string; description: string; variant?: 'default' | 'destructive' }) => {
+      toast(props)
+    },
+    [toast]
+  )
 
   useEffect(() => {
     if (!showWelcome) {
@@ -213,127 +185,236 @@ export default function Home() {
   }, [isSubscribed, freeMessages])
 
   useEffect(() => {
-    const fetchPreferenceId = async () => {
+    if (!showWelcome && messages.length === 0) {
+      setMessages([
+        {
+          role: 'assistant',
+          content:
+            '¡Hola! Soy AMT IA, tu asistente de inteligencia artificial creado por Giancarlo Tonazza, potenciado por Anthropic. Estoy aquí para ayudarte con cualquier pregunta o tema que desees explorar. ¿En qué puedo asistirte hoy?',
+        },
+      ])
+    }
+  }, [showWelcome, messages])
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+
       try {
-        const response = await fetch('/api/create-mercadopago-preference', {
-          method: 'POST',
-        });
-        const data = await response.json();
-        if (data.id) {
-          setPreferenceId(data.id);
-        } else {
-          throw new Error('No se pudo obtener el preferenceId');
+        console.log('handleSubmit called')
+        if (!inputRef.current || isLoading) {
+          console.log('Input ref not available or already loading')
+          return
         }
+
+        const input = inputRef.current.value.trim()
+        if (!input) {
+          console.log('Empty input')
+          showToast({
+            title: 'Mensaje vacío',
+            description: 'Por favor, escribe un mensaje antes de enviar.',
+            variant: 'destructive',
+          })
+          return
+        }
+
+        console.log('User input:', input)
+
+        if (freeMessages <= 0 && !isSubscribed) {
+          console.log('No free messages left and not subscribed')
+          showToast({
+            title: 'Límite de mensajes alcanzado',
+            description: 'Has alcanzado el límite de mensajes gratuitos. Suscríbete para continuar.',
+            variant: 'destructive',
+          })
+          return
+        }
+
+        const userMessage = { role: 'user' as const, content: input }
+        setMessages((prev) => [...prev, userMessage])
+        inputRef.current.value = ''
+        setIsLoading(true)
+
+        const expectationResponse = await fetch('/api/generate-expectation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: input }),
+        })
+
+        if (expectationResponse.ok) {
+          const { topic } = await expectationResponse.json()
+          setExpectationTopic(topic)
+        }
+
+        console.log('Sending chat request')
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: [...messages, userMessage] }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(`Chat API error: ${response.status} - ${errorData.error || 'Unknown error'}`)
+        }
+
+        const reader = response.body?.getReader()
+        if (!reader) {
+          throw new Error('Failed to get response reader')
+        }
+
+        console.log('Processing streaming response')
+        let accumulatedResponse = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunk = new TextDecoder().decode(value)
+          accumulatedResponse += chunk
+        }
+
+        if (!accumulatedResponse.trim()) {
+          throw new Error('Received empty response from the API')
+        }
+
+        const aiMessage = { role: 'assistant' as const, content: accumulatedResponse }
+        setMessages((prev) => [...prev, aiMessage])
+
+        if (!isSubscribed) {
+          setFreeMessages((prev) => Math.max(0, prev - 1))
+        }
+
+        const newPoints = Math.floor(accumulatedResponse.length / 10)
+        setUserPoints((prev) => prev + newPoints)
+
+        console.log('Chat response processed successfully')
       } catch (error) {
-        console.error('Error al obtener el preferenceId:', error);
+        console.error('Error in handleSubmit:', error)
+        let errorMessage = 'Hubo un problema al procesar tu mensaje. Por favor, intenta de nuevo.'
+        if (error instanceof Error) {
+          errorMessage = error.message
+        }
         showToast({
-          title: "Error",
-          description: "No se pudo iniciar el proceso de pago. Por favor, intente nuevamente.",
-          variant: "destructive",
-        });
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+        setExpectationTopic('')
+        if (inputRef.current) {
+          inputRef.current.focus()
+        }
       }
-    };
+    },
+    [messages, isLoading, freeMessages, isSubscribed, showToast]
+  )
 
-    fetchPreferenceId();
-  }, [showToast]);
+  const handleSubscribe = useCallback(() => {
+    setShowCheckout(true)
+  }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inputRef.current || isLoading) return
-    
-    const input = inputRef.current.value.trim()
-    if (!input) {
-      showToast({
-        title: "Mensaje vacío",
-        description: "Por favor, escribe un mensaje antes de enviar.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (freeMessages <= 0 && !isSubscribed) {
-      showToast({
-        title: "Límite de mensajes alcanzado",
-        description: "Has alcanzado el límite de mensajes gratuitos. Suscríbete para continuar.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const userMessage = { role: 'user', content: input }
-    setMessages(prev => [...prev, userMessage])
-    inputRef.current.value = ''
-    setIsLoading(true)
-    setFreeMessages(prev => isSubscribed ? prev : prev - 1)
-
-    try {
-      const aiResponse = await chatWithAI(messages.concat(userMessage))
-      const aiMessage = { role: 'assistant', content: aiResponse }
-      setMessages(prev => [...prev, aiMessage])
-    } catch (error) {
-      console.error('Error:', error)
-      showToast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Hubo un problema al procesar tu mensaje. Por favor, intenta de nuevo.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-      inputRef.current?.focus()
-    }
-  }
+  const handleSubscriptionSuccess = useCallback(() => {
+    setIsSubscribed(true)
+    setShowCheckout(false)
+    showToast({
+      title: 'Suscripción exitosa',
+      description: 'Gracias por suscribirte a AMT IA Premium.',
+    })
+  }, [showToast])
 
   return (
     <ToastProvider>
-      {showWelcome ? (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-100 p-4">
+      <AnimatePresence>
+        {showWelcome ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center"
+            key="welcome"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-purple-900 text-gray-100 p-4"
           >
-            <h1 className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-              Bienvenido a AMT IA
-            </h1>
-            <p className="mb-8 max-w-md mx-auto">
-              Con AMT IA, puedes conversar sobre cualquier tema, obtener respuestas a tus preguntas,
-              y explorar nuevas ideas. Además, te ayudamos con:
-            </p>
-            <ul className="list-disc text-left mb-8 max-w-md mx-auto">
-              <li>Estrategias para tus negocios y emprendimientos</li>
-              <li>Planificación y seguimiento de rutinas de ejercicio</li>
-              <li>Consejos para mejorar tu productividad</li>
-              <li>Análisis de datos y tendencias de mercado</li>
-              <li>Generación de ideas creativas para proyectos</li>
-              <li>Asistencia en la toma de decisiones importantes</li>
-            </ul>
-            <p className="mb-8">
-              ¡Comienza tu aventura ahora con 6 mensajes gratuitos!
-            </p>
-            <Button 
-              onClick={() => setShowWelcome(false)}
-              className="bg-purple-600 hover:bg-purple-700"
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="text-center max-w-2xl"
             >
-              Comenzar a chatear <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+              <h1 className="text-5xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+                Bienvenido a AMT IA
+              </h1>
+              <p className="text-xl mb-8 text-gray-300">
+                Explora el futuro de la inteligencia artificial con AMT IA. Tu asistente personal para:
+              </p>
+              <ul className="grid grid-cols-2 gap-4 mb-8 text-left">
+                {[
+                  "Estrategias de negocio innovadoras",
+                  "Planificación de rutinas de ejercicio",
+                  "Optimización de productividad",
+                  "Análisis de datos y tendencias",
+                  "Generación de ideas creativas",
+                  "Asistencia en toma de decisiones"
+                ].map((item, index) => (
+                  <motion.li
+                    key={index}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center space-x-2"
+                  >
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <span>{item}</span>
+                  </motion.li>
+                ))}
+              </ul>
+              <p className="text-2xl font-semibold mb-8 text-purple-300">
+                ¡Comienza tu aventura ahora con 6 mensajes gratuitos!
+              </p>
+              <Button 
+                onClick={() => setShowWelcome(false)}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-lg font-medium py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105"
+              >
+                Comenzar a chatear <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </motion.div>
           </motion.div>
-        </div>
-      ) : (
-        <MainContent 
-          messages={messages}
-          isLoading={isLoading}
-          freeMessages={freeMessages}
-          isSubscribed={isSubscribed}
-          handleSubmit={handleSubmit}
-          inputRef={inputRef}
-          messagesEndRef={messagesEndRef}
-          showToast={showToast}
-          setFreeMessages={setFreeMessages}
-          setIsSubscribed={setIsSubscribed}
-          preferenceId={preferenceId}
-        />
-      )}
+        ) : (
+          <motion.div
+            key="chat"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="h-screen"
+          >
+            {showCheckout ? (
+              <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-purple-900 text-gray-100 p-4">
+                <h2 className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+                  Suscripción Premium AMT IA
+                </h2>
+                <MercadoPagoCheckout onSuccess={handleSubscriptionSuccess} />
+                <Button 
+                  onClick={() => setShowCheckout(false)}
+                  className="mt-4 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-full transition-all duration-300"
+                >
+                  Volver al chat
+                </Button>
+              </div>
+            ) : (
+              <MainContent 
+                messages={messages}
+                isLoading={isLoading}
+                freeMessages={freeMessages}
+                isSubscribed={isSubscribed}
+                handleSubmit={handleSubmit}
+                inputRef={inputRef}
+                messagesEndRef={messagesEndRef}
+                userPoints={userPoints}
+                handleSubscribe={handleSubscribe}
+                expectationTopic={expectationTopic}
+              />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </ToastProvider>
   )
 }

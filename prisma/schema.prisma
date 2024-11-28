@@ -8,73 +8,55 @@ datasource db {
 }
 
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  name              String?
-  password          String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  role              Role      @default(USER)
-  mercadoPagoVendorId String?
-  isSubscribed      Boolean   @default(false)
-  subscriptionId    String?
-  transactions      Transaction[]
-  chatSessions      ChatSession[]
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  name                  String?
+  password              String?
+  externalId            String   @unique
+  isSubscribed          Boolean  @default(false)
+  subscriptionExpiresAt DateTime?
+  points                Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  conversations         Conversation[]
+  transactions          Transaction[]
 }
 
-model VendorCredentials {
-  id                String    @id @default(cuid())
-  vendorId          String    @unique
-  accessToken       String
-  publicKey         String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-}
-
-model Transaction {
-  id                String    @id @default(cuid())
-  userId            String
-  user              User      @relation(fields: [userId], references: [id])
-  amount            Float
-  status            TransactionStatus
-  paymentMethod     String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  mercadoPagoId     String?
-}
-
-model ChatSession {
-  id                String    @id @default(cuid())
-  userId            String
-  user              User      @relation(fields: [userId], references: [id])
-  messages          Message[]
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+model Conversation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  messages  Message[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Message {
-  id                String    @id @default(cuid())
-  chatSessionId     String
-  chatSession       ChatSession @relation(fields: [chatSessionId], references: [id])
-  content           String
-  role              MessageRole
-  createdAt         DateTime  @default(now())
+  id             String   @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  role           String
+  content        String
+  createdAt      DateTime @default(now())
 }
 
-enum Role {
-  USER
-  ADMIN
-  VENDOR
+model Transaction {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  paymentId         String
+  amount            Float
+  type              String
+  status            String
+  externalReference String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
-enum TransactionStatus {
-  PENDING
-  COMPLETED
-  FAILED
-}
-
-enum MessageRole {
-  USER
-  AI
+model VendorCredentials {
+  id       String @id @default(uuid())
+  vendorId String @unique
+  apiKey   String
+  secret   String?
 }
 

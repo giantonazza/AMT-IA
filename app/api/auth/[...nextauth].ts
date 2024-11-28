@@ -1,14 +1,21 @@
-import NextAuth from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
-import prisma from "@/lib/prisma"
-import bcrypt from "bcryptjs"
+import NextAuth, { DefaultSession } from 'next-auth'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import bcrypt from 'bcryptjs'
+import prisma from '@/lib/prisma'
+
+// Extend the built-in session type
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+    } & DefaultSession["user"]
+  }
+}
 
 export default NextAuth({
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" }
@@ -17,25 +24,31 @@ export default NextAuth({
         if (!credentials?.email || !credentials?.password) {
           return null
         }
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
+          where: { email: credentials.email },
+          select: { id: true, email: true, name: true, password: true }
         })
-        if (!user) {
+
+        if (!user || !user.password) {
           return null
         }
+
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
         if (!isPasswordValid) {
           return null
         }
-        return { id: user.id, email: user.email, name: user.name }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        }
       }
     })
   ],
   session: {
-    strategy: "jwt"
-  },
-  pages: {
-    signIn: "/login"
+    strategy: 'jwt',
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -49,7 +62,11 @@ export default NextAuth({
         session.user.id = token.id as string
       }
       return session
-    }
-  }
+    },
+  },
+  pages: {
+    signIn: '/auth/signin',
+  },
+  secret: process.env.NEXTAUTH_SECRET,
 })
 

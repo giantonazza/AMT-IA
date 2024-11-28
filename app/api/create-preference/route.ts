@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST() {
   try {
@@ -11,11 +12,14 @@ export async function POST() {
     const client = new MercadoPagoConfig({ accessToken });
 
     const preference = new Preference(client);
+    const productPrice = 9.99; // Precio de la suscripción
+
     const preferenceData = {
       items: [
         {
+          id: uuidv4(),
           title: 'Suscripción Premium AMT IA',
-          unit_price: 9.99,
+          unit_price: productPrice,
           quantity: 1,
           currency_id: 'USD',
         }
@@ -38,7 +42,4 @@ export async function POST() {
     return NextResponse.json({ error: 'Error creating preference' }, { status: 500 });
   }
 }
-
-
-
 

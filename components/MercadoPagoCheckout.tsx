@@ -12,6 +12,7 @@ interface MercadoPagoCheckoutProps {
 export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutProps) {
   const [preferenceId, setPreferenceId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -27,10 +28,13 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
         })
 
         if (!response.ok) {
-          throw new Error('Error al obtener el ID de preferencia')
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
 
         const data = await response.json()
+        if (!data.id) {
+          throw new Error('Preference ID not received from the server')
+        }
         setPreferenceId(data.id)
       } catch (error) {
         console.error('Error:', error)
@@ -39,6 +43,7 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
           description: "No se pudo iniciar el proceso de pago. Por favor, intente nuevamente.",
           variant: "destructive",
         })
+        setError(error instanceof Error ? error.message : 'An unknown error occurred')
       } finally {
         setIsLoading(false)
       }
@@ -57,6 +62,10 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
 
   if (isLoading) {
     return <Button disabled>Cargando...</Button>
+  }
+
+  if (error) {
+    return <div className="text-red-500">Error: {error}</div>
   }
 
   return preferenceId ? (

@@ -1,15 +1,14 @@
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 import prisma from './prisma';
 import { v4 as uuidv4 } from 'uuid';
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || '' });
 
-export async function updateUserPoints(responseLength: number): Promise<number> {
-  const pointsEarned = Math.floor(responseLength / 100); // 1 punto por cada 100 caracteres de respuesta
+export async function updateUserPoints(userId: string, responseLength: number): Promise<number> {
+  const pointsEarned = Math.floor(responseLength / 100);
 
-  // Actualizar los puntos en la base de datos
   const updatedUser = await prisma.user.update({
-    where: { id: 'user_id' }, // Reemplazar con el ID real del usuario
+    where: { id: userId },
     data: {
       points: {
         increment: pointsEarned
@@ -39,7 +38,7 @@ export async function redeemPoints(userId: string, points: number): Promise<bool
             title: `Redención de ${points} puntos`,
             quantity: 1,
             currency_id: 'UYU',
-            unit_price: -(points * 0.1) // Cada punto vale 0.1 unidades de moneda
+            unit_price: -(points * 0.1)
           }
         ],
         back_urls: {
@@ -84,9 +83,9 @@ export async function createSubscriptionPreference(): Promise<string | null> {
           }
         ],
         back_urls: {
-          success: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
-          failure: `${process.env.NEXT_PUBLIC_BASE_URL}/failure`,
-          pending: `${process.env.NEXT_PUBLIC_BASE_URL}/pending`,
+          success: `${process.env.NEXT_PUBLIC_BASE_URL}/api/subscription/success`,
+          failure: `${process.env.NEXT_PUBLIC_BASE_URL}/api/subscription/failure`,
+          pending: `${process.env.NEXT_PUBLIC_BASE_URL}/api/subscription/pending`,
         },
         auto_return: 'approved',
         statement_descriptor: 'AMT IA Subscription',
@@ -94,7 +93,7 @@ export async function createSubscriptionPreference(): Promise<string | null> {
       }
     });
 
-    return response.id;
+    return response.id ?? null;
   } catch (error) {
     console.error('Error creating MercadoPago preference:', error);
     return null;
@@ -137,10 +136,32 @@ export async function createPaymentPreference(userId: string, amount: number): P
       }
     });
 
-    return response.id;
+    return response.id ?? null;
   } catch (error) {
     console.error('Error creating MercadoPago payment preference:', error);
     return null;
+  }
+}
+
+export async function fetchPaymentInfoFromMercadoPago(paymentId: string) {
+  try {
+    const payment = await new Payment(client).get({ id: paymentId });
+
+    if (!payment) {
+      throw new Error('Payment not found');
+    }
+
+    return {
+      payer: {
+        email: payment.payer?.email ?? 'unknown@example.com',
+      },
+      transaction_amount: payment.transaction_amount ?? 0,
+      status: payment.status ?? 'unknown',
+      external_reference: payment.external_reference ?? '',
+    };
+  } catch (error) {
+    console.error('Error fetching payment info from MercadoPago:', error);
+    throw new Error('Failed to fetch payment information');
   }
 }
 
