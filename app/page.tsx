@@ -10,9 +10,9 @@ import { useToast } from '@/components/ui/use-toast'
 import { ToastProvider, ToastViewport } from '@/components/ui/toast'
 import MercadoPagoCheckout from '@/components/MercadoPagoCheckout'
 import { ExpectationWindow } from '@/components/ExpectationWindow'
-import { getCookie, setCookie } from 'cookies-next'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { FeedbackForm } from '@/components/FeedbackForm'
+import { InvitationCodeButton } from '@/components/InvitationCodeButton'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -35,7 +35,7 @@ function ChatMessage({ message, isLast }: { message: Message; isLast: boolean })
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6`}
     >
       <div className={`flex items-start ${isUser ? 'flex-row-reverse' : ''} max-w-[80%]`}>
         <div className={`flex-shrink-0 ${isUser ? 'ml-3' : 'mr-3'}`}>
@@ -52,7 +52,7 @@ function ChatMessage({ message, isLast }: { message: Message; isLast: boolean })
               : 'bg-gray-800 text-gray-100'
           }`}
         >
-          {message.content}
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
         </div>
       </div>
       {isLast && <div className="h-16" />}
@@ -74,6 +74,8 @@ function MainContent({
   showFeedback,
   setShowFeedback,
   handleFeedback,
+  showToast,
+  setIsSubscribed,
 }: {
   messages: Message[]
   isLoading: boolean
@@ -88,6 +90,8 @@ function MainContent({
   showFeedback: boolean
   setShowFeedback: (show: boolean) => void
   handleFeedback: (feedback: { rating: 'positive' | 'negative'; comment: string }) => Promise<void>
+  showToast: (props: { title: string; description: string; variant?: 'default' | 'destructive' }) => void
+  setIsSubscribed: (isSubscribed: boolean) => void
 }) {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 to-purple-900 text-gray-100">
@@ -96,12 +100,15 @@ function MainContent({
         <div className="flex items-center space-x-4">
           <UserPoints points={userPoints} />
           {!isSubscribed && (
-            <Button
-              onClick={handleSubscribe}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105"
-            >
-              Suscribirse
-            </Button>
+            <>
+              <Button
+                onClick={handleSubscribe}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105"
+              >
+                Suscribirse
+              </Button>
+              <InvitationCodeButton onSuccess={() => setIsSubscribed(true)} showToast={showToast} />
+            </>
           )}
         </div>
       </header>
@@ -132,6 +139,11 @@ function MainContent({
                   <Send className="w-5 h-5" />
                 </Button>
               </form>
+              {!isSubscribed && freeMessages > 0 && (
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                  Tienes {freeMessages} mensaje{freeMessages !== 1 ? 's' : ''} gratuito{freeMessages !== 1 ? 's' : ''} restante{freeMessages !== 1 ? 's' : ''}
+                </p>
+              )}
               {!isLoading && messages.length > 0 && !showFeedback && (
                 <Button
                   onClick={() => setShowFeedback(true)}
@@ -190,14 +202,16 @@ export default function Home() {
   const { toast } = useToast()
 
   useEffect(() => {
-    const storedFreeMessages = getCookie('freeMessages')
+    const storedFreeMessages = localStorage.getItem('freeMessages')
     if (storedFreeMessages) {
       setFreeMessages(Number(storedFreeMessages))
+    } else {
+      localStorage.setItem('freeMessages', '2')
     }
   }, [])
 
   useEffect(() => {
-    setCookie('freeMessages', freeMessages.toString())
+    localStorage.setItem('freeMessages', freeMessages.toString())
   }, [freeMessages])
 
   const showToast = useCallback(
@@ -216,8 +230,13 @@ export default function Home() {
   useEffect(() => {
     if (!isSubscribed && freeMessages <= 0) {
       setMessages([])
+      showToast({
+        title: 'Mensajes gratuitos agotados',
+        description: 'Has alcanzado el límite de mensajes gratuitos. Suscríbete para continuar chateando.',
+        variant: 'destructive',
+      })
     }
-  }, [isSubscribed, freeMessages])
+  }, [isSubscribed, freeMessages, showToast])
 
   useEffect(() => {
     if (!showWelcome && messages.length === 0) {
@@ -225,7 +244,7 @@ export default function Home() {
         {
           role: 'assistant',
           content:
-            '¡Bienvenido a AMT IA! Soy tu asistente de inteligencia artificial creado por Giancarlo Tonazza,Uruguay y potenciado por Anthropic. Estoy listo para ayudarte en tu camino hacia el éxito. ¿Necesitas ayuda con estrategias para tu emprendimiento? ¿Quieres optimizar tu productividad? ¿O tal vez necesitas ideas creativas para tu próximo proyecto? Estoy aquí para asistirte en lo que necesites. ¿En qué área te gustaría que nos enfoquemos hoy?',
+            '¡Bienvenido a AMT IA! Soy tu asistente de inteligencia artificial creado por Giancarlo Tonazza en Uruguay y potenciado por Anthropic. Estoy listo para ayudarte en tu camino hacia el éxito. ¿Necesitas ayuda con estrategias para tu emprendimiento? ¿Quieres optimizar tu productividad? ¿O tal vez necesitas ideas creativas para tu próximo proyecto? Estoy aquí para asistirte en lo que necesites. ¿En qué área te gustaría que nos enfoquemos hoy?',
         },
       ])
     }
@@ -300,24 +319,33 @@ export default function Home() {
 
         console.log('Processing streaming response')
         let accumulatedResponse = ''
+        const decoder = new TextDecoder()
+
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
-          const chunk = new TextDecoder().decode(value)
+          const chunk = decoder.decode(value, { stream: true })
           accumulatedResponse += chunk
+          setMessages((prev) => {
+            const newMessages = [...prev]
+            const lastMessage = newMessages[newMessages.length - 1]
+            if (lastMessage.role === 'assistant') {
+              lastMessage.content = accumulatedResponse
+            } else {
+              newMessages.push({ role: 'assistant', content: accumulatedResponse })
+            }
+            return newMessages
+          })
         }
 
         if (!accumulatedResponse.trim()) {
           throw new Error('Received empty response from the API')
         }
 
-        const aiMessage = { role: 'assistant' as const, content: accumulatedResponse }
-        setMessages((prev) => [...prev, aiMessage])
-
         if (!isSubscribed) {
           setFreeMessages((prev) => {
             const newValue = Math.max(0, prev - 1)
-            setCookie('freeMessages', newValue.toString())
+            localStorage.setItem('freeMessages', newValue.toString())
             return newValue
           })
         }
@@ -392,6 +420,12 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
+
   return (
     <ToastProvider>
       <AnimatePresence>
@@ -412,17 +446,20 @@ export default function Home() {
               <h1 className="text-5xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
                 Bienvenido a AMT IA
               </h1>
+              <p className="text-2xl mb-4 text-purple-300 font-semibold">
+                La Primera Aplicación de IA creada en Uruguay
+              </p>
               <p className="text-xl mb-8 text-gray-300">
-                Explora el futuro de la inteligencia artificial con AMT IA. Tu asistente personal para:
+                AMT IA: Tu asistente personal de inteligencia artificial, diseñado para ofrecer soluciones reales a los desafíos complejos de tu vida diaria.
               </p>
               <ul className="grid grid-cols-2 gap-4 mb-8 text-left">
                 {[
-                  "Estrategias de negocio innovadoras",
-                  "Planificación de rutinas de ejercicio",
-                  "Optimización de productividad",
-                  "Análisis de datos y tendencias",
-                  "Generación de ideas creativas",
-                  "Asistencia en toma de decisiones"
+                  "Resolución de problemas complejos",
+                  "Estrategias personalizadas",
+                  "Análisis profundo de situaciones",
+                  "Generación de ideas innovadoras",
+                  "Optimización de procesos diarios",
+                  "Toma de decisiones informadas"
                 ].map((item, index) => (
                   <motion.li
                     key={index}
@@ -436,8 +473,11 @@ export default function Home() {
                   </motion.li>
                 ))}
               </ul>
-              <p className="text-2xl font-semibold mb-8 text-purple-300">
-                ¡Comienza tu aventura ahora con 2 mensajes gratuitos!
+              <p className="text-2xl font-semibold mb-4 text-purple-300">
+                Soluciones reales para tus desafíos diarios
+              </p>
+              <p className="text-lg mb-8 text-gray-300">
+                Desde problemas profesionales hasta dilemas personales, AMT IA está aquí para ayudarte a encontrar respuestas efectivas y prácticas.
               </p>
               <Button 
                 onClick={() => setShowWelcome(false)}
@@ -460,6 +500,16 @@ export default function Home() {
                 <h2 className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
                   Suscripción Premium AMT IA
                 </h2>
+                <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6 max-w-md w-full">
+                  <h3 className="text-xl font-semibold mb-4 text-purple-300">Beneficios de la suscripción:</h3>
+                  <ul className="list-disc list-inside space-y-2 text-gray-300">
+                    <li>Mensajes ilimitados con AMT IA</li>
+                    <li>Acceso prioritario a nuevas funciones</li>
+                    <li>Respuestas más rápidas y detalladas</li>
+                    <li>Soporte personalizado</li>
+                    <li>Sin publicidad</li>
+                  </ul>
+                </div>
                 <MercadoPagoCheckout onSuccess={handleSubscriptionSuccess} />
                 <Button 
                   onClick={() => setShowCheckout(false)}
@@ -483,6 +533,8 @@ export default function Home() {
                 showFeedback={showFeedback}
                 setShowFeedback={setShowFeedback}
                 handleFeedback={handleFeedback}
+                showToast={showToast}
+                setIsSubscribed={setIsSubscribed}
               />
             )}
           </motion.div>

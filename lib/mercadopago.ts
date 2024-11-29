@@ -2,7 +2,9 @@ import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
 import prisma from './prisma';
 import { v4 as uuidv4 } from 'uuid';
 
-const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || '' });
+const client = new MercadoPagoConfig({ 
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || '' 
+});
 
 export async function updateUserPoints(userId: string, responseLength: number): Promise<number> {
   const pointsEarned = Math.floor(responseLength / 100);
@@ -145,19 +147,20 @@ export async function createPaymentPreference(userId: string, amount: number): P
 
 export async function fetchPaymentInfoFromMercadoPago(paymentId: string) {
   try {
-    const payment = await new Payment(client).get({ id: paymentId });
+    const payment = new Payment(client);
+    const response = await payment.get({ id: paymentId });
 
-    if (!payment) {
+    if (!response) {
       throw new Error('Payment not found');
     }
 
     return {
       payer: {
-        email: payment.payer?.email ?? 'unknown@example.com',
+        email: response.payer?.email ?? 'unknown@example.com',
       },
-      transaction_amount: payment.transaction_amount ?? 0,
-      status: payment.status ?? 'unknown',
-      external_reference: payment.external_reference ?? '',
+      transaction_amount: response.transaction_amount ?? 0,
+      status: response.status ?? 'unknown',
+      external_reference: response.external_reference ?? '',
     };
   } catch (error) {
     console.error('Error fetching payment info from MercadoPago:', error);

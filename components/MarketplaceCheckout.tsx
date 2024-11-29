@@ -66,3 +66,4 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
   )
 }
 
+

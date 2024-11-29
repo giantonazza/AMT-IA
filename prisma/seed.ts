@@ -34,7 +34,7 @@ async function main() {
   })
 
   // Create a sample conversation
-  const conversation = await prisma.conversation.create({
+  await prisma.conversation.create({
     data: {
       userId: user.id,
       messages: {

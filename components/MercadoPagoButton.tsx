@@ -47,21 +47,26 @@ export default function MercadoPagoButton({ onSuccess, preferenceId }: MercadoPa
       return () => {
         window.removeEventListener('payment.success', onSuccess);
       };
-    } else {
-      console.error('MercadoPago SDK not loaded');
-      setError('No se pudo cargar el sistema de pago. Por favor, intente más tarde.');
     }
+    
+    console.error('MercadoPago SDK not loaded');
+    setError('No se pudo cargar el sistema de pago. Por favor, intente más tarde.');
+    return undefined;
   }, [preferenceId, onSuccess]);
 
   useEffect(() => {
     if (isSDKLoaded && preferenceId) {
       try {
-        return initializeMercadoPago();
+        const cleanup = initializeMercadoPago();
+        return () => {
+          if (cleanup) cleanup();
+        };
       } catch (err) {
         console.error('Error al inicializar MercadoPago:', err);
         setError('Hubo un problema al iniciar el pago. Por favor, intente nuevamente.');
       }
     }
+    return () => {}; // Return an empty cleanup function when conditions are not met
   }, [isSDKLoaded, preferenceId, initializeMercadoPago]);
 
   const handlePayButtonClick = useCallback(() => {
@@ -104,5 +109,4 @@ export default function MercadoPagoButton({ onSuccess, preferenceId }: MercadoPa
     </>
   );
 }
-
 

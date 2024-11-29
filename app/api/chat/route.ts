@@ -16,87 +16,79 @@ export async function POST(req: Request) {
 
     // Get userId from cookies
     const cookieStore = await cookies();
-    const userId = cookieStore.get('userId')?.value;
+    const userId = cookieStore.get('userId')?.value || '';
 
     if (!userId) {
       console.log('No userId found in cookies');
-      // Proceed without user-specific operations if no userId is found
     } else {
-      // Only attempt to update user if we have a userId
       try {
-        await prisma.user.update({
+        const user = await prisma.user.update({
           where: { id: userId },
-          data: { lastAccessAt: new Date() }
+          data: { lastAccessAt: new Date() },
+          select: { isSubscribed: true, points: true }
         });
 
-        const user = await prisma.user.findUnique({
-          where: { id: userId }
-        });
-
-        if (user && !user.isSubscribed && user.points <= 0) {
+        if (!user.isSubscribed && user.points <= 0) {
           return NextResponse.json({ error: 'No tienes más mensajes gratuitos' }, { status: 403 });
         }
       } catch (error) {
         console.error('Error updating user:', error);
-        // Continue with the chat even if user update fails
       }
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
-      console.error('ANTHROPIC_API_KEY is not set in environment variables');
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not set' }, { status: 500 });
+      throw new Error('ANTHROPIC_API_KEY is not set in environment variables');
     }
 
     console.log('Sending request to Anthropic API...');
-    const response = await anthropic.messages.create({
-      model: 'claude-2.1',
-      messages: messages,
-      max_tokens: 4000,
-      temperature: 0.7,
-      stream: true,
-    });
+    try {
+      const response = await anthropic.messages.create({
+        model: 'claude-2.1',
+        messages: messages,
+        max_tokens: 4096,
+        temperature: 0.7,
+        stream: true,
+      });
 
-    console.log('Anthropic API response received');
+      console.log('Anthropic API response received');
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of response) {
-            if (chunk.type === 'content_block_delta' && 'text' in chunk.delta) {
-              controller.enqueue(chunk.delta.text);
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of response) {
+              if (chunk.type === 'content_block_delta' && 'text' in chunk.delta) {
+                controller.enqueue(chunk.delta.text);
+              }
             }
+            controller.close();
+          } catch (error) {
+            console.error('Error in stream processing:', error);
+            controller.error(error);
           }
-          controller.close();
-        } catch (error) {
-          console.error('Error in stream processing:', error);
-          controller.error(error);
-        }
-      },
-    });
+        },
+      });
 
-    console.log('Stream created successfully');
+      console.log('Stream created successfully');
 
-    // Update points only if we have a valid user
-    if (userId) {
-      try {
-        const user = await prisma.user.findUnique({
-          where: { id: userId }
-        });
-
-        if (user && !user.isSubscribed) {
+      // Update points only if we have a valid user
+      if (userId) {
+        try {
           await prisma.user.update({
-            where: { id: userId },
+            where: { id: userId, isSubscribed: false },
             data: { points: { decrement: 1 } }
           });
+        } catch (error) {
+          console.error('Error updating user points:', error);
         }
-      } catch (error) {
-        console.error('Error updating user points:', error);
       }
-    }
 
-    return new Response(stream, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    });
+      return new Response(stream, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
+    } catch (error) {
+      console.error('Error calling Anthropic API:', error);
+      return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
+    }
   } catch (error) {
     console.error('Error in chat API:', error);
     return NextResponse.json({ 

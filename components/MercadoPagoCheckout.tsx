@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import MercadoPagoButton from './MercadoPagoButton'
@@ -52,13 +52,13 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
     fetchPreferenceId()
   }, [toast])
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = useCallback(() => {
     toast({
       title: "¡Pago exitoso!",
       description: "Su suscripción ha sido activada.",
     })
     onSuccess()
-  }
+  }, [toast, onSuccess])
 
   if (isLoading) {
     return <Button disabled>Cargando...</Button>
@@ -69,7 +69,12 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
   }
 
   return preferenceId ? (
-    <MercadoPagoButton preferenceId={preferenceId} onSuccess={handlePaymentSuccess} />
+    <div className="flex flex-col items-center">
+      <MercadoPagoButton preferenceId={preferenceId} onSuccess={handlePaymentSuccess} />
+      <p className="mt-4 text-sm text-gray-400">
+        Al suscribirte, aceptas nuestros términos y condiciones.
+      </p>
+    </div>
   ) : (
     <Button disabled>Error al cargar el pago</Button>
   )

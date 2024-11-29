@@ -1,18 +1,11 @@
-import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { v4 as uuidv4 } from 'uuid';
+import { NextResponse } from 'next/server';
 
-export async function POST(req: Request) {
+export async function POST() {
   console.log('Creating MercadoPago preference...');
 
   try {
-    const { amount } = await req.json();
-    console.log('Received amount:', amount);
-
-    if (!amount || isNaN(amount)) {
-      return NextResponse.json({ error: 'Invalid amount provided' }, { status: 400 });
-    }
-
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     if (!accessToken) {
       console.error('MERCADOPAGO_ACCESS_TOKEN is not defined in environment variables');
@@ -27,9 +20,9 @@ export async function POST(req: Request) {
         {
           id: uuidv4(),
           title: 'Suscripción Premium AMT IA',
-          unit_price: Number(amount),
+          unit_price: 9.99,
           quantity: 1,
-          currency_id: 'UYU',
+          currency_id: 'USD',
         },
       ],
       back_urls: {
@@ -67,5 +60,4 @@ export async function POST(req: Request) {
     }
   }
 }
-
 
