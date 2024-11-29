@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       const invitationCode = await prisma.invitationCode.findUnique({
         where: { 
           code,
-          usedBy: null,
+          usedBy: undefined,
           isUsed: false
         },
       });
