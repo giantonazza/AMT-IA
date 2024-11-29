@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Get or create user
-      const cookieStore = cookies();
+      const cookieStore = await cookies();
       let userId = cookieStore.get('userId')?.value;
 
       if (!userId) {
