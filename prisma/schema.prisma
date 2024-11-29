@@ -18,8 +18,11 @@ model User {
   points                Int      @default(0)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+  lastAccessAt          DateTime @default(now())
+  expiresAt             DateTime?
   conversations         Conversation[]
   transactions          Transaction[]
+  feedback              Feedback[]
 }
 
 model Conversation {
@@ -29,6 +32,7 @@ model Conversation {
   messages  Message[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  feedback  Feedback[]
 }
 
 model Message {
@@ -58,5 +62,16 @@ model VendorCredentials {
   vendorId String @unique
   apiKey   String
   secret   String?
+}
+
+model Feedback {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  rating         String
+  comment        String?
+  createdAt      DateTime @default(now())
 }
 

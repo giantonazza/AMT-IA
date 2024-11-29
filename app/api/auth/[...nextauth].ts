@@ -2,6 +2,7 @@ import NextAuth, { DefaultSession } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
+import { startCleanupJob } from '@/lib/cleanupJob'
 
 // Extend the built-in session type
 declare module "next-auth" {
@@ -11,6 +12,9 @@ declare module "next-auth" {
     } & DefaultSession["user"]
   }
 }
+
+// Iniciar el trabajo de limpieza
+startCleanupJob()
 
 export default NextAuth({
   providers: [

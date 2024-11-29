@@ -10,6 +10,9 @@ import { useToast } from '@/components/ui/use-toast'
 import { ToastProvider, ToastViewport } from '@/components/ui/toast'
 import MercadoPagoCheckout from '@/components/MercadoPagoCheckout'
 import { ExpectationWindow } from '@/components/ExpectationWindow'
+import { getCookie, setCookie } from 'cookies-next'
+import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { FeedbackForm } from '@/components/FeedbackForm'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -52,7 +55,7 @@ function ChatMessage({ message, isLast }: { message: Message; isLast: boolean })
           {message.content}
         </div>
       </div>
-      {isLast && <div className="h-16" />} {/* Add extra space after the last message */}
+      {isLast && <div className="h-16" />}
     </motion.div>
   )
 }
@@ -68,6 +71,9 @@ function MainContent({
   userPoints,
   handleSubscribe,
   expectationTopic,
+  showFeedback,
+  setShowFeedback,
+  handleFeedback,
 }: {
   messages: Message[]
   isLoading: boolean
@@ -79,6 +85,9 @@ function MainContent({
   userPoints: number
   handleSubscribe: () => void
   expectationTopic: string
+  showFeedback: boolean
+  setShowFeedback: (show: boolean) => void
+  handleFeedback: (feedback: { rating: 'positive' | 'negative'; comment: string }) => Promise<void>
 }) {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 to-purple-900 text-gray-100">
@@ -103,6 +112,7 @@ function MainContent({
               {messages.map((message, index) => (
                 <ChatMessage key={index} message={message} isLast={index === messages.length - 1} />
               ))}
+              {isLoading && <LoadingSpinner />}
               <div ref={messagesEndRef} />
             </div>
             <div className="p-4 bg-black bg-opacity-50 backdrop-blur-md">
@@ -122,6 +132,19 @@ function MainContent({
                   <Send className="w-5 h-5" />
                 </Button>
               </form>
+              {!isLoading && messages.length > 0 && !showFeedback && (
+                <Button
+                  onClick={() => setShowFeedback(true)}
+                  className="mt-4 bg-purple-500 hover:bg-purple-600 text-white"
+                >
+                  Dar retroalimentación
+                </Button>
+              )}
+              {showFeedback && (
+                <div className="mt-4">
+                  <FeedbackForm onSubmit={handleFeedback} />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -156,14 +179,26 @@ export default function Home() {
   const [showWelcome, setShowWelcome] = useState(true)
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [freeMessages, setFreeMessages] = useState(6)
+  const [freeMessages, setFreeMessages] = useState(2)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [userPoints, setUserPoints] = useState<number>(0)
   const [expectationTopic, setExpectationTopic] = useState<string>('')
   const [showCheckout, setShowCheckout] = useState(false)
+  const [showFeedback, setShowFeedback] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+
+  useEffect(() => {
+    const storedFreeMessages = getCookie('freeMessages')
+    if (storedFreeMessages) {
+      setFreeMessages(Number(storedFreeMessages))
+    }
+  }, [])
+
+  useEffect(() => {
+    setCookie('freeMessages', freeMessages.toString())
+  }, [freeMessages])
 
   const showToast = useCallback(
     (props: { title: string; description: string; variant?: 'default' | 'destructive' }) => {
@@ -190,7 +225,7 @@ export default function Home() {
         {
           role: 'assistant',
           content:
-            '¡Hola! Soy AMT IA, tu asistente de inteligencia artificial creado por Giancarlo Tonazza, potenciado por Anthropic. Estoy aquí para ayudarte con cualquier pregunta o tema que desees explorar. ¿En qué puedo asistirte hoy?',
+            '¡Bienvenido a AMT IA! Soy tu asistente de inteligencia artificial creado por Giancarlo Tonazza en Uruguay y potenciado por Anthropic. Estoy listo para ayudarte en tu camino hacia el éxito. ¿Necesitas ayuda con estrategias para tu emprendimiento? ¿Quieres optimizar tu productividad? ¿O tal vez necesitas ideas creativas para tu próximo proyecto? Estoy aquí para asistirte en lo que necesites. ¿En qué área te gustaría que nos enfoquemos hoy?',
         },
       ])
     }
@@ -280,7 +315,11 @@ export default function Home() {
         setMessages((prev) => [...prev, aiMessage])
 
         if (!isSubscribed) {
-          setFreeMessages((prev) => Math.max(0, prev - 1))
+          setFreeMessages((prev) => {
+            const newValue = Math.max(0, prev - 1)
+            setCookie('freeMessages', newValue.toString())
+            return newValue
+          })
         }
 
         const newPoints = Math.floor(accumulatedResponse.length / 10)
@@ -321,6 +360,37 @@ export default function Home() {
       description: 'Gracias por suscribirte a AMT IA Premium.',
     })
   }, [showToast])
+
+  const handleFeedback = async (feedback: { rating: 'positive' | 'negative'; comment: string }) => {
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: 'user_id', // Reemplazar con el ID real del usuario
+          conversationId: 'conversation_id', // Reemplazar con el ID real de la conversación
+          ...feedback
+        }),
+      });
+
+      if (response.ok) {
+        showToast({
+          title: 'Gracias por tu retroalimentación',
+          description: 'Tu opinión es muy importante para nosotros.',
+        });
+        setShowFeedback(false);
+      } else {
+        throw new Error('Failed to submit feedback');
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      showToast({
+        title: 'Error',
+        description: 'No se pudo enviar la retroalimentación. Por favor, intenta de nuevo.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <ToastProvider>
@@ -367,7 +437,7 @@ export default function Home() {
                 ))}
               </ul>
               <p className="text-2xl font-semibold mb-8 text-purple-300">
-                ¡Comienza tu aventura ahora con 6 mensajes gratuitos!
+                ¡Comienza tu aventura ahora con 2 mensajes gratuitos!
               </p>
               <Button 
                 onClick={() => setShowWelcome(false)}
@@ -410,6 +480,9 @@ export default function Home() {
                 userPoints={userPoints}
                 handleSubscribe={handleSubscribe}
                 expectationTopic={expectationTopic}
+                showFeedback={showFeedback}
+                setShowFeedback={setShowFeedback}
+                handleFeedback={handleFeedback}
               />
             )}
           </motion.div>
@@ -418,5 +491,4 @@ export default function Home() {
     </ToastProvider>
   )
 }
-
 

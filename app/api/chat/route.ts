@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Anthropic } from '@anthropic-ai/sdk';
+import prisma from '@/lib/prisma';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -14,13 +15,32 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, userId } = await req.json();
     console.log('Received messages:', JSON.stringify(messages, null, 2));
+
+    // Actualizar la fecha de último acceso del usuario
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lastAccessAt: new Date() }
+    });
+
+    // Verificar si el usuario está suscrito o si aún tiene mensajes gratuitos
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    if (!user.isSubscribed && user.points <= 0) {
+      return NextResponse.json({ error: 'No tienes más mensajes gratuitos' }, { status: 403 });
+    }
 
     const response = await anthropic.messages.create({
       model: 'claude-2.1',
       messages: messages,
-      max_tokens: 1000,
+      max_tokens: 4000,
       temperature: 0.7,
       stream: true,
     });
@@ -45,6 +65,14 @@ export async function POST(req: Request) {
     });
 
     console.log('Stream created successfully');
+
+    // Si el usuario no está suscrito, restar un punto
+    if (!user.isSubscribed) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { points: { decrement: 1 } }
+      });
+    }
 
     return new Response(stream, {
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
