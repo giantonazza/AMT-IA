@@ -225,7 +225,7 @@ export default function Home() {
         {
           role: 'assistant',
           content:
-            '¡Bienvenido a AMT IA! Soy tu asistente de inteligencia artificial creado por Giancarlo Tonazza en Uruguay y potenciado por Anthropic. Estoy listo para ayudarte en tu camino hacia el éxito. ¿Necesitas ayuda con estrategias para tu emprendimiento? ¿Quieres optimizar tu productividad? ¿O tal vez necesitas ideas creativas para tu próximo proyecto? Estoy aquí para asistirte en lo que necesites. ¿En qué área te gustaría que nos enfoquemos hoy?',
+            '¡Bienvenido a AMT IA! Soy tu asistente de inteligencia artificial creado por Giancarlo Tonazza,Uruguay y potenciado por Anthropic. Estoy listo para ayudarte en tu camino hacia el éxito. ¿Necesitas ayuda con estrategias para tu emprendimiento? ¿Quieres optimizar tu productividad? ¿O tal vez necesitas ideas creativas para tu próximo proyecto? Estoy aquí para asistirte en lo que necesites. ¿En qué área te gustaría que nos enfoquemos hoy?',
         },
       ])
     }
