@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Anthropic } from '@anthropic-ai/sdk';
 import prisma from '@/lib/prisma';
-import { getSession } from 'next-auth/react';
 import { cookies } from 'next/headers';
 
 const anthropic = new Anthropic({
@@ -16,7 +15,7 @@ export async function POST(req: Request) {
     console.log('Received messages:', JSON.stringify(messages, null, 2));
 
     // Get userId from cookies
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const userId = cookieStore.get('userId')?.value;
 
     if (!userId) {
