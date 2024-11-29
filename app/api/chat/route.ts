@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Anthropic } from '@anthropic-ai/sdk';
 import prisma from '@/lib/prisma';
+import { getSession } from 'next-auth/react';
+import { cookies } from 'next/headers';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -9,34 +11,44 @@ const anthropic = new Anthropic({
 export async function POST(req: Request) {
   console.log('Chat API route called');
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY is not set in .env.local');
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not set' }, { status: 500 });
-  }
-
   try {
-    const { messages, userId } = await req.json();
+    const { messages } = await req.json();
     console.log('Received messages:', JSON.stringify(messages, null, 2));
 
-    // Actualizar la fecha de último acceso del usuario
-    await prisma.user.update({
-      where: { id: userId },
-      data: { lastAccessAt: new Date() }
-    });
+    // Get userId from cookies
+    const cookieStore = cookies();
+    const userId = cookieStore.get('userId')?.value;
 
-    // Verificar si el usuario está suscrito o si aún tiene mensajes gratuitos
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
+    if (!userId) {
+      console.log('No userId found in cookies');
+      // Proceed without user-specific operations if no userId is found
+    } else {
+      // Only attempt to update user if we have a userId
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { lastAccessAt: new Date() }
+        });
 
-    if (!user) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+        const user = await prisma.user.findUnique({
+          where: { id: userId }
+        });
+
+        if (user && !user.isSubscribed && user.points <= 0) {
+          return NextResponse.json({ error: 'No tienes más mensajes gratuitos' }, { status: 403 });
+        }
+      } catch (error) {
+        console.error('Error updating user:', error);
+        // Continue with the chat even if user update fails
+      }
     }
 
-    if (!user.isSubscribed && user.points <= 0) {
-      return NextResponse.json({ error: 'No tienes más mensajes gratuitos' }, { status: 403 });
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not set in environment variables');
+      return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not set' }, { status: 500 });
     }
 
+    console.log('Sending request to Anthropic API...');
     const response = await anthropic.messages.create({
       model: 'claude-2.1',
       messages: messages,
@@ -47,7 +59,6 @@ export async function POST(req: Request) {
 
     console.log('Anthropic API response received');
 
-    // Convert the response to a ReadableStream
     const stream = new ReadableStream({
       async start(controller) {
         try {
@@ -66,12 +77,22 @@ export async function POST(req: Request) {
 
     console.log('Stream created successfully');
 
-    // Si el usuario no está suscrito, restar un punto
-    if (!user.isSubscribed) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { points: { decrement: 1 } }
-      });
+    // Update points only if we have a valid user
+    if (userId) {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: userId }
+        });
+
+        if (user && !user.isSubscribed) {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { points: { decrement: 1 } }
+          });
+        }
+      } catch (error) {
+        console.error('Error updating user points:', error);
+      }
     }
 
     return new Response(stream, {
