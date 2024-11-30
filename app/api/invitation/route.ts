@@ -39,10 +39,10 @@ export async function POST(req: NextRequest) {
 
         // Update invitation code in a transaction to ensure atomicity
         await prisma.$transaction([
-          prisma.invitationCode.update({
+          prisma.invitationCode.updateMany({
             where: { 
               id: invitationCode.id,
-              isUsed: false, // Additional check to prevent race conditions
+              isUsed: false, 
               usedBy: null
             },
             data: { 
@@ -74,10 +74,10 @@ export async function POST(req: NextRequest) {
             subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
           },
         }),
-        prisma.invitationCode.update({
+        prisma.invitationCode.updateMany({
           where: { 
             id: invitationCode.id,
-            isUsed: false, // Additional check to prevent race conditions
+            isUsed: false, 
             usedBy: null
           },
           data: { 
