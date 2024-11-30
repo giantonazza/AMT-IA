@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 
 export async function GET(_req: NextRequest) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const userId = cookieStore.get('userId')?.value;
 
     if (!userId) {
