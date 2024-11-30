@@ -8,52 +8,61 @@ export async function POST(req: NextRequest) {
     const { action, code } = await req.json();
 
     if (action === 'validate') {
-      // Find the invitation code and ensure it's not used
-      const invitationCode = await prisma.invitationCode.findFirst({
-        where: { 
-          code,
-          isUsed: false,
-          usedBy: null // Explicitly check that it's not assigned to any user
-        },
-      });
-      
-      if (!invitationCode) {
-        return NextResponse.json({ valid: false });
-      }
+      return await prisma.$transaction(async (tx) => {
+        // Find the invitation code and lock it for update
+        const invitationCode = await tx.invitationCode.findFirst({
+          where: { 
+            code,
+            isUsed: false,
+            usedBy: null
+          },
+          select: {
+            id: true
+          }
+        });
+        
+        if (!invitationCode) {
+          return NextResponse.json({ valid: false });
+        }
 
-      // Get or create user
-      const cookieStore = await cookies();
-      let userId = cookieStore.get('userId')?.value;
+        // Get or create user
+        const cookieStore = await cookies();
+        let userId = cookieStore.get('userId')?.value;
 
-      if (!userId) {
-        // Create a temporary user if none exists
-        const newUser = await prisma.user.create({
-          data: {
-            email: `temp_${uuidv4()}@example.com`,
-            externalId: uuidv4(),
-            isSubscribed: true,
-            subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        if (!userId) {
+          // Create a temporary user if none exists
+          const newUser = await tx.user.create({
+            data: {
+              email: `temp_${uuidv4()}@example.com`,
+              externalId: uuidv4(),
+              isSubscribed: true,
+              subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+            },
+          });
+          userId = newUser.id;
+        } else {
+          // Update existing user's subscription
+          await tx.user.update({
+            where: { id: userId },
+            data: { 
+              isSubscribed: true,
+              subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+            },
+          });
+        }
+
+        // Update the invitation code
+        await tx.invitationCode.update({
+          where: { 
+            id: invitationCode.id,
+          },
+          data: { 
+            usedBy: userId,
+            usedAt: new Date(),
+            isUsed: true
           },
         });
-        userId = newUser.id;
 
-        // Update invitation code in a transaction to ensure atomicity
-        await prisma.$transaction([
-          prisma.invitationCode.updateMany({
-            where: { 
-              id: invitationCode.id,
-              isUsed: false, 
-              usedBy: null
-            },
-            data: { 
-              usedBy: userId,
-              usedAt: new Date(),
-              isUsed: true
-            },
-          }),
-        ]);
-
-        // Set the user ID cookie
         const response = NextResponse.json({ valid: true });
         response.cookies.set('userId', userId, {
           httpOnly: true,
@@ -63,32 +72,9 @@ export async function POST(req: NextRequest) {
         });
 
         return response;
-      }
-
-      // If user exists, update their subscription status and the invitation code in a transaction
-      await prisma.$transaction([
-        prisma.user.update({
-          where: { id: userId },
-          data: { 
-            isSubscribed: true,
-            subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-          },
-        }),
-        prisma.invitationCode.updateMany({
-          where: { 
-            id: invitationCode.id,
-            isUsed: false, 
-            usedBy: null
-          },
-          data: { 
-            usedBy: userId,
-            usedAt: new Date(),
-            isUsed: true
-          },
-        })
-      ]);
-
-      return NextResponse.json({ valid: true });
+      }, {
+        isolationLevel: 'Serializable' // This ensures the highest level of isolation
+      });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
