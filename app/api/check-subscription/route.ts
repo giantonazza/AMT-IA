@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const cookieStore = cookies();
     const userId = cookieStore.get('userId')?.value;
@@ -20,11 +20,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ isSubscribed: false });
     }
 
-    const isSubscribed = user.isSubscribed && user.subscriptionExpiresAt && user.subscriptionExpiresAt > new Date();
+    const isSubscriptionValid = user.isSubscribed && user.subscriptionExpiresAt 
+      ? new Date(user.subscriptionExpiresAt) > new Date() 
+      : false;
 
-    return NextResponse.json({ isSubscribed });
+    return NextResponse.json({ 
+      isSubscribed: isSubscriptionValid 
+    });
+
   } catch (error) {
     console.error('Error checking subscription status:', error);
-    return NextResponse.json({ error: 'Error al verificar el estado de la suscripción' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to check subscription status' },
+      { status: 500 }
+    );
   }
 }
+
