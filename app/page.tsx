@@ -141,7 +141,7 @@ function MainContent({
               </form>
               {!isSubscribed && freeMessages > 0 && (
                 <p className="text-xs text-gray-400 mt-2 text-center">
-                  Tienes {freeMessages} mensaje{freeMessages !== 1 ? 's' : ''} gratuito{freeMessages !== 1 ? 's' : ''} restante{freeMessages !== 1 ? 's' : ''}
+                  Tienes {freeMessages} mensajes gratuitos restantes
                 </p>
               )}
               {!isLoading && messages.length > 0 && !showFeedback && (
@@ -191,7 +191,7 @@ export default function Home() {
   const [showWelcome, setShowWelcome] = useState(true)
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [freeMessages, setFreeMessages] = useState(2)
+  const [freeMessages, setFreeMessages] = useState(3)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [userPoints, setUserPoints] = useState<number>(0)
   const [expectationTopic, setExpectationTopic] = useState<string>('')
@@ -206,7 +206,7 @@ export default function Home() {
     if (storedFreeMessages) {
       setFreeMessages(Number(storedFreeMessages))
     } else {
-      localStorage.setItem('freeMessages', '2')
+      localStorage.setItem('freeMessages', '3')
     }
   }, [])
 
@@ -543,4 +543,5 @@ export default function Home() {
     </ToastProvider>
   )
 }
+
 

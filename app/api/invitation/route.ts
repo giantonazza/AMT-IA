@@ -8,12 +8,12 @@ export async function POST(req: NextRequest) {
     const { action, code } = await req.json();
 
     if (action === 'validate') {
-      // Find the invitation code
-      const invitationCode = await prisma.invitationCode.findUnique({
+      // Find the invitation code and ensure it's not used
+      const invitationCode = await prisma.invitationCode.findFirst({
         where: { 
           code,
-          usedBy: undefined,
-          isUsed: false
+          isUsed: false,
+          usedBy: null // Explicitly check that it's not assigned to any user
         },
       });
       
@@ -32,9 +32,26 @@ export async function POST(req: NextRequest) {
             email: `temp_${uuidv4()}@example.com`,
             externalId: uuidv4(),
             isSubscribed: true,
+            subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
           },
         });
         userId = newUser.id;
+
+        // Update invitation code in a transaction to ensure atomicity
+        await prisma.$transaction([
+          prisma.invitationCode.update({
+            where: { 
+              id: invitationCode.id,
+              isUsed: false, // Additional check to prevent race conditions
+              usedBy: null
+            },
+            data: { 
+              usedBy: userId,
+              usedAt: new Date(),
+              isUsed: true
+            },
+          }),
+        ]);
 
         // Set the user ID cookie
         const response = NextResponse.json({ valid: true });
@@ -45,37 +62,31 @@ export async function POST(req: NextRequest) {
           maxAge: 30 * 24 * 60 * 60, // 30 days
         });
 
-        // Update invitation code
-        await prisma.invitationCode.update({
-          where: { id: invitationCode.id },
+        return response;
+      }
+
+      // If user exists, update their subscription status and the invitation code in a transaction
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: { 
+            isSubscribed: true,
+            subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+          },
+        }),
+        prisma.invitationCode.update({
+          where: { 
+            id: invitationCode.id,
+            isUsed: false, // Additional check to prevent race conditions
+            usedBy: null
+          },
           data: { 
             usedBy: userId,
             usedAt: new Date(),
             isUsed: true
           },
-        });
-
-        return response;
-      }
-
-      // If user exists, update their subscription status
-      await prisma.user.update({
-        where: { id: userId },
-        data: { 
-          isSubscribed: true,
-          subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-        },
-      });
-
-      // Update invitation code
-      await prisma.invitationCode.update({
-        where: { id: invitationCode.id },
-        data: { 
-          usedBy: userId,
-          usedAt: new Date(),
-          isUsed: true
-        },
-      });
+        })
+      ]);
 
       return NextResponse.json({ valid: true });
     }
