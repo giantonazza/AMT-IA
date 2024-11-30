@@ -4,13 +4,14 @@ import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
-  console.log('Invitation API route called');
+  console.log('Invitation API route called in production');
   try {
     const { action, code } = await req.json();
     console.log('Received action:', action, 'code:', code);
 
     if (action === 'validate') {
       return await prisma.$transaction(async (tx) => {
+        console.log('Starting invitation code validation');
         console.log('Searching for invitation code:', code);
         const invitationCode = await tx.invitationCode.findFirst({
           where: { 

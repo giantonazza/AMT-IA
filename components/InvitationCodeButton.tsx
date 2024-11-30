@@ -19,6 +19,7 @@ export const InvitationCodeButton: React.FC<InvitationCodeButtonProps> = ({ onSu
 
   const handleInvitationCode = async () => {
     if (!invitationCode.trim()) {
+      console.log('Empty invitation code submitted');
       showToast({
         title: 'Error',
         description: 'Por favor, ingrese un código de invitación.',
@@ -39,12 +40,14 @@ export const InvitationCodeButton: React.FC<InvitationCodeButtonProps> = ({ onSu
       const data = await response.json();
       console.log('Response data:', data);
       if (data.valid) {
+        console.log('Invitation code validated successfully');
         onSuccess();
         showToast({
           title: '¡Bienvenido a Premium!',
           description: 'Has sido suscrito exitosamente. Disfruta de tus beneficios premium.',
         });
       } else {
+        console.log('Invalid invitation code:', data.error);
         showToast({
           title: 'Código de invitación inválido',
           description: data.error || 'Por favor, verifica el código e intenta nuevamente.',
