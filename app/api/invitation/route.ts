@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
             },
           });
         } catch (updateError) {
-          if (updateError.code === 'P2002') {
+          if (updateError instanceof Error && 'code' in updateError && updateError.code === 'P2002') {
             console.log('Invitation code already used by another user');
             return NextResponse.json({ valid: false, error: 'Invitation code already used' });
           }
