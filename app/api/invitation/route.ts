@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ valid: false });
         }
 
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         let userId = cookieStore.get('userId')?.value;
         console.log('Current userId from cookie:', userId);
 
