@@ -4,11 +4,14 @@ import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
+  console.log('Invitation API route called');
   try {
     const { action, code } = await req.json();
+    console.log('Received action:', action, 'code:', code);
 
     if (action === 'validate') {
       return await prisma.$transaction(async (tx) => {
+        console.log('Searching for invitation code:', code);
         const invitationCode = await tx.invitationCode.findFirst({
           where: { 
             code,
@@ -19,14 +22,19 @@ export async function POST(req: NextRequest) {
           }
         });
         
+        console.log('Invitation code found:', invitationCode);
+        
         if (!invitationCode) {
+          console.log('Invalid or used invitation code');
           return NextResponse.json({ valid: false });
         }
 
-        const cookieStore = await cookies();
+        const cookieStore = cookies();
         let userId = cookieStore.get('userId')?.value;
+        console.log('Current userId from cookie:', userId);
 
         if (!userId) {
+          console.log('Creating new user');
           const newUser = await tx.user.create({
             data: {
               email: `temp_${uuidv4()}@example.com`,
@@ -36,7 +44,9 @@ export async function POST(req: NextRequest) {
             },
           });
           userId = newUser.id;
+          console.log('New user created:', userId);
         } else {
+          console.log('Updating existing user');
           await tx.user.update({
             where: { id: userId },
             data: { 
@@ -46,6 +56,7 @@ export async function POST(req: NextRequest) {
           });
         }
 
+        console.log('Updating invitation code');
         await tx.invitationCode.update({
           where: { id: invitationCode.id },
           data: { 
@@ -55,6 +66,7 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        console.log('Invitation code successfully used');
         const response = NextResponse.json({ valid: true });
         response.cookies.set('userId', userId, {
           httpOnly: true,
@@ -69,6 +81,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    console.log('Invalid action:', action);
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
     console.error('Error processing invitation:', error);

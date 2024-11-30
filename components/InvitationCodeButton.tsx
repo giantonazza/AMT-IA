@@ -29,12 +29,15 @@ export const InvitationCodeButton: React.FC<InvitationCodeButtonProps> = ({ onSu
 
     setIsSubmitting(true);
     try {
+      console.log('Sending invitation code validation request:', invitationCode);
       const response = await fetch('/api/invitation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'validate', code: invitationCode }),
       });
+      console.log('Received response:', response.status, response.statusText);
       const data = await response.json();
+      console.log('Response data:', data);
       if (data.valid) {
         onSuccess();
         showToast({
