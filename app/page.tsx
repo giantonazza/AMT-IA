@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Send, Sparkles, User, Bot } from 'lucide-react'
@@ -93,7 +95,7 @@ function MainContent({
 }) {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-900 to-purple-900 text-gray-100">
-      <header className="flex flex-wrap items-center justify-between p-2 sm:p-4 bg-black bg-opacity-50 backdrop-blur-md">
+      <header className="fixed top-0 left-0 right-0 z-50 flex flex-wrap items-center justify-between p-2 sm:p-4 bg-black bg-opacity-50 backdrop-blur-md">
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">AMT IA Chat</h1>
         <div className="flex items-center space-x-4">
           <UserPoints points={userPoints} />
@@ -110,8 +112,8 @@ function MainContent({
           )}
         </div>
       </header>
-      <main className="flex-grow overflow-hidden p-2 sm:p-4">
-        <Card className="bg-black bg-opacity-50 backdrop-blur-md border-none h-full rounded-2xl overflow-hidden">
+      <main className="flex-grow overflow-hidden p-2 sm:p-4 mt-16">
+        <Card className="bg-black bg-opacity-50 backdrop-blur-md border-none h-[calc(100vh-8rem)] rounded-2xl overflow-hidden mx-auto max-w-6xl">
           <CardContent className="p-0 h-full flex flex-col">
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
               {messages.map((message, index) => (
@@ -121,7 +123,7 @@ function MainContent({
               <div ref={messagesEndRef} />
             </div>
             <div className="p-4 bg-black bg-opacity-50 backdrop-blur-md">
-              <form onSubmit={handleSubmit} className="flex space-x-2">
+              <form onSubmit={handleSubmit} className="flex space-x-2 max-w-4xl mx-auto">
                 <Input
                   ref={inputRef}
                   type="text"
@@ -143,15 +145,17 @@ function MainContent({
                 </p>
               )}
               {!isLoading && messages.length > 0 && !showFeedback && (
-                <Button
-                  onClick={() => setShowFeedback(true)}
-                  className="mt-4 bg-purple-500 hover:bg-purple-600 text-white"
-                >
-                  Dar retroalimentación
-                </Button>
+                <div className="flex justify-center mt-4">
+                  <Button
+                    onClick={() => setShowFeedback(true)}
+                    className="bg-purple-500 hover:bg-purple-600 text-white"
+                  >
+                    Dar retroalimentación
+                  </Button>
+                </div>
               )}
               {showFeedback && (
-                <div className="mt-4">
+                <div className="mt-4 max-w-2xl mx-auto">
                   <FeedbackForm onSubmit={handleFeedback} />
                 </div>
               )}
@@ -159,8 +163,8 @@ function MainContent({
           </CardContent>
         </Card>
       </main>
-      <footer className="p-4 bg-black bg-opacity-50 backdrop-blur-md">
-        <div className="flex justify-between items-center">
+      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-black bg-opacity-50 backdrop-blur-md">
+        <div className="flex justify-between items-center max-w-6xl mx-auto">
           {!isSubscribed && (
             <p className="text-sm text-gray-400">
               Mensajes gratuitos restantes: <span className="font-bold text-purple-400">{freeMessages}</span>
@@ -172,7 +176,7 @@ function MainContent({
               href="https://instagram.com/giantonazza"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-purple-400 transition-colors duration-300"
+              className="hover:text-purple-400 transition-all duration-300"
             >
               Instagram
             </a>
@@ -379,13 +383,13 @@ export default function Home() {
   }, [])
 
   const handleSubscriptionSuccess = useCallback(() => {
-    setIsSubscribed(true);
-    setShowCheckout(false);
+    setIsSubscribed(true)
+    setShowCheckout(false)
     showToast({
       title: 'Suscripción exitosa',
-      description: 'Gracias por suscribirte a AMT IA Premium. Tus beneficios han sido activados.',
-    });
-  }, [showToast]);
+      description: 'Gracias por suscribirte a AMT IA Premium.',
+    })
+  }, [showToast])
 
   const handleFeedback = async (feedback: { rating: 'positive' | 'negative'; comment: string }) => {
     try {
@@ -423,32 +427,6 @@ export default function Home() {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
-
-  useEffect(() => {
-    const checkSubscriptionStatus = async () => {
-      try {
-        const response = await fetch('/api/check-subscription');
-        const data = await response.json();
-        setIsSubscribed(data.isSubscribed);
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
-      }
-    };
-
-    checkSubscriptionStatus();
-
-    // Verificar si hay un mensaje de éxito en la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const successMessage = urlParams.get('message');
-    if (successMessage) {
-      showToast({
-        title: '¡Éxito!',
-        description: successMessage,
-      });
-      // Limpiar el mensaje de la URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
 
   return (
     <ToastProvider>
@@ -567,3 +545,4 @@ export default function Home() {
     </ToastProvider>
   )
 }
+
