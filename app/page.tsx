@@ -21,8 +21,8 @@ interface Message {
 
 function UserPoints({ points }: { points: number }) {
   return (
-    <div className="text-sm text-gray-300 flex items-center">
-      <Sparkles className="w-4 h-4 mr-1 text-yellow-400" />
+    <div className="text-xs sm:text-sm text-gray-300 flex items-center">
+      <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-yellow-400" />
       <span className="font-bold">{points}</span> puntos
     </div>
   )
@@ -94,8 +94,8 @@ function MainContent({
   setIsSubscribed: (isSubscribed: boolean) => void
 }) {
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 to-purple-900 text-gray-100">
-      <header className="flex items-center justify-between p-4 bg-black bg-opacity-50 backdrop-blur-md">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-900 to-purple-900 text-gray-100">
+      <header className="flex flex-wrap items-center justify-between p-2 sm:p-4 bg-black bg-opacity-50 backdrop-blur-md">
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">AMT IA Chat</h1>
         <div className="flex items-center space-x-4">
           <UserPoints points={userPoints} />
@@ -103,7 +103,7 @@ function MainContent({
             <>
               <Button
                 onClick={handleSubscribe}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium py-1 px-2 sm:py-2 sm:px-4 rounded-full transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm"
               >
                 Suscribirse
               </Button>
@@ -112,7 +112,7 @@ function MainContent({
           )}
         </div>
       </header>
-      <main className="flex-grow overflow-hidden p-4">
+      <main className="flex-grow overflow-hidden p-2 sm:p-4">
         <Card className="bg-black bg-opacity-50 backdrop-blur-md border-none h-full rounded-2xl overflow-hidden">
           <CardContent className="p-0 h-full flex flex-col">
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
@@ -128,7 +128,7 @@ function MainContent({
                   ref={inputRef}
                   type="text"
                   placeholder="Escribe tu mensaje..."
-                  className="flex-grow bg-gray-800 text-white border-gray-700 rounded-full py-2 px-4 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="flex-grow bg-gray-800 text-white border-gray-700 rounded-full py-2 px-4 focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm sm:text-base"
                   disabled={isLoading || (!isSubscribed && freeMessages <= 0)}
                 />
                 <Button
@@ -136,7 +136,7 @@ function MainContent({
                   disabled={isLoading || (!isSubscribed && freeMessages <= 0)}
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-full p-2 transition-all duration-300 transform hover:scale-105"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>
               </form>
               {!isSubscribed && freeMessages > 0 && (
@@ -543,5 +543,4 @@ export default function Home() {
     </ToastProvider>
   )
 }
-
 
