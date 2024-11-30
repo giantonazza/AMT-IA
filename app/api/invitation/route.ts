@@ -57,14 +57,22 @@ export async function POST(req: NextRequest) {
         }
 
         console.log('Updating invitation code');
-        await tx.invitationCode.update({
-          where: { id: invitationCode.id },
-          data: { 
-            usedBy: userId,
-            usedAt: new Date(),
-            isUsed: true
-          },
-        });
+        try {
+          await tx.invitationCode.update({
+            where: { id: invitationCode.id },
+            data: { 
+              usedBy: userId,
+              usedAt: new Date(),
+              isUsed: true
+            },
+          });
+        } catch (updateError) {
+          if (updateError.code === 'P2002') {
+            console.log('Invitation code already used by another user');
+            return NextResponse.json({ valid: false, error: 'Invitation code already used' });
+          }
+          throw updateError;
+        }
 
         console.log('Invitation code successfully used');
         const response = NextResponse.json({ valid: true });
