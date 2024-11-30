@@ -13,7 +13,7 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
   const [preferenceId, setPreferenceId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isSubscribed, setIsSubscribed] = useState(false); // Added state for subscription status
+  const [isSubscribed, setIsSubscribed] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -53,30 +53,14 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
     fetchPreferenceId()
   }, [toast])
 
-  useEffect(() => {
-    const checkSubscriptionStatus = async () => {
-      try {
-        const response = await fetch('/api/check-subscription');
-        const data = await response.json();
-        if (data.isSubscribed) {
-          setIsSubscribed(true);
-        }
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
-      }
-    };
-
-    checkSubscriptionStatus();
-  }, []);
-
   const handlePaymentSuccess = useCallback(() => {
-    setIsSubscribed(true);
     toast({
-      title: "¡Suscripción exitosa!",
-      description: "Tu suscripción premium ha sido activada. ¡Disfruta de tus beneficios!",
-    });
-    onSuccess();
-  }, [toast, onSuccess]);
+      title: "¡Pago exitoso!",
+      description: "Su suscripción ha sido activada.",
+    })
+    setIsSubscribed(true)
+    onSuccess()
+  }, [toast, onSuccess])
 
   if (isLoading) {
     return <Button disabled>Cargando...</Button>
@@ -87,7 +71,7 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
   }
 
   if (isSubscribed) {
-    return <div>Ya estás suscrito!</div>; // Added a message for already subscribed users
+    return <div className="text-green-500">¡Suscripción activada!</div>
   }
 
   return preferenceId ? (
@@ -99,3 +83,6 @@ export default function MercadoPagoCheckout({ onSuccess }: MercadoPagoCheckoutPr
     </div>
   ) : (
     <Button disabled>Error al cargar el pago</Button>
+  )
+}
+
