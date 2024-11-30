@@ -74,3 +74,4 @@ const finalConfig = (withPWAConfig as (config: NextConfig) => NextConfig)(nextCo
 
 export default finalConfig;
 
+

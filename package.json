@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "rimraf .next && prisma generate && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed.ts",
@@ -59,17 +59,12 @@
     "@types/react-dom": "^18",
     "@types/three": "^0.170.0",
     "@types/uuid": "^9.0.8",
-    "@types/webpack": "^5.28.5",
     "eslint": "^8",
     "eslint-config-next": "15.0.3",
     "postcss": "^8",
-    "rimraf": "^5.0.5",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
-  },
-  "resolutions": {
-    "punycode": "2.1.0"
   }
 }
 
