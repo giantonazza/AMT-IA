@@ -1,5 +1,3 @@
-'use client'
-
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Send, Sparkles, User, Bot } from 'lucide-react'
@@ -381,13 +379,13 @@ export default function Home() {
   }, [])
 
   const handleSubscriptionSuccess = useCallback(() => {
-    setIsSubscribed(true)
-    setShowCheckout(false)
+    setIsSubscribed(true);
+    setShowCheckout(false);
     showToast({
       title: 'Suscripción exitosa',
-      description: 'Gracias por suscribirte a AMT IA Premium.',
-    })
-  }, [showToast])
+      description: 'Gracias por suscribirte a AMT IA Premium. Tus beneficios han sido activados.',
+    });
+  }, [showToast]);
 
   const handleFeedback = async (feedback: { rating: 'positive' | 'negative'; comment: string }) => {
     try {
@@ -425,6 +423,32 @@ export default function Home() {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
+
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      try {
+        const response = await fetch('/api/check-subscription');
+        const data = await response.json();
+        setIsSubscribed(data.isSubscribed);
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+      }
+    };
+
+    checkSubscriptionStatus();
+
+    // Verificar si hay un mensaje de éxito en la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const successMessage = urlParams.get('message');
+    if (successMessage) {
+      showToast({
+        title: '¡Éxito!',
+        description: successMessage,
+      });
+      // Limpiar el mensaje de la URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   return (
     <ToastProvider>
@@ -543,4 +567,3 @@ export default function Home() {
     </ToastProvider>
   )
 }
-

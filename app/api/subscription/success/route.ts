@@ -57,12 +57,12 @@ export async function GET(request: NextRequest) {
     const pointsEarned = Math.floor(transaction.amount * 10);
     await updateUserPoints(user.id, pointsEarned);
 
-    const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}?success=true`);
+    const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}?success=true&message=Suscripción activada correctamente`);
     response.cookies.set('userId', user.id, { 
       httpOnly: true, 
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60,
+      maxAge: 30 * 24 * 60 * 60, // 30 días
     });
 
     return response;

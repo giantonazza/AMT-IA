@@ -41,13 +41,13 @@ export const InvitationCodeButton: React.FC<InvitationCodeButtonProps> = ({ onSu
       if (data.valid) {
         onSuccess();
         showToast({
-          title: 'Código de invitación válido',
-          description: 'Has sido suscrito exitosamente.',
+          title: '¡Bienvenido a Premium!',
+          description: 'Has sido suscrito exitosamente. Disfruta de tus beneficios premium.',
         });
       } else {
         showToast({
           title: 'Código de invitación inválido',
-          description: 'Por favor, verifica el código e intenta nuevamente.',
+          description: data.error || 'Por favor, verifica el código e intenta nuevamente.',
           variant: 'destructive',
         });
       }

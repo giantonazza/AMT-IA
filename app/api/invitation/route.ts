@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
         
         if (!invitationCode) {
           console.log('Invalid or used invitation code');
-          return NextResponse.json({ valid: false });
+          return NextResponse.json({ valid: false, error: 'Código de invitación inválido o ya utilizado' });
         }
 
         const cookieStore = await cookies();
@@ -69,13 +69,16 @@ export async function POST(req: NextRequest) {
         } catch (updateError) {
           if (updateError instanceof Error && 'code' in updateError && updateError.code === 'P2002') {
             console.log('Invitation code already used by another user');
-            return NextResponse.json({ valid: false, error: 'Invitation code already used' });
+            return NextResponse.json({ valid: false, error: 'El código de invitación ya ha sido utilizado' });
           }
           throw updateError;
         }
 
         console.log('Invitation code successfully used');
-        const response = NextResponse.json({ valid: true });
+        const response = NextResponse.json({ 
+          valid: true, 
+          message: '¡Bienvenido a Premium! Tu suscripción ha sido activada.'
+        });
         response.cookies.set('userId', userId, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
@@ -90,12 +93,12 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('Invalid action:', action);
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    return NextResponse.json({ error: 'Acción inválida' }, { status: 400 });
   } catch (error) {
     console.error('Error processing invitation:', error);
     return NextResponse.json({ 
-      error: 'Failed to process invitation',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Error al procesar la invitación',
+      details: error instanceof Error ? error.message : 'Error desconocido'
     }, { status: 500 });
   }
 }
