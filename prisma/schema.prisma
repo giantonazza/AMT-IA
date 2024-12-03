@@ -11,9 +11,10 @@ model User {
   id                     String           @id @default(uuid())
   email                  String           @unique
   name                   String?
-  password               String?
+  password               String           // Ahora es obligatorio
   externalId             String           @unique
-  isSubscribed           Boolean          @default(false)
+  role                   UserRole         @default(USER)  // Default role for new users
+  subscriptionTier       SubscriptionTier @default(FREE)  // Renombrado de isSubscribed
   subscriptionExpiresAt  DateTime?
   points                 Int              @default(0)
   createdAt              DateTime         @default(now())
@@ -27,6 +28,18 @@ model User {
   transactions           Transaction[]
   feedback               Feedback[]
   usedInvitationCode     InvitationCode?  @relation("UsedBy")
+  createdInvitationCodes InvitationCode[] @relation("CreatedBy")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  FREE
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
 }
 
 model Conversation {
@@ -84,6 +97,8 @@ model InvitationCode {
   code      String    @unique
   usedBy    String?   @unique
   user      User?     @relation("UsedBy", fields: [usedBy], references: [id])
+  createdBy String
+  creator   User      @relation("CreatedBy", fields: [createdBy], references: [id])
   createdAt DateTime  @default(now())
   usedAt    DateTime?
   isUsed    Boolean   @default(false)

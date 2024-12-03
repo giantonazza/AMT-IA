@@ -38,7 +38,15 @@ export async function createUser(userData: {
   externalId: string
 }) {
   const user = await prisma.user.create({
-    data: userData,
+    data: {
+      email: userData.email,
+      name: userData.name || '',
+      password: userData.password || '',
+      externalId: userData.externalId,
+      role: 'USER',
+      subscriptionTier: 'FREE',
+      points: 0,
+    },
   })
   return user
 }

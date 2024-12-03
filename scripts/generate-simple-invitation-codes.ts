@@ -5,11 +5,11 @@ import path from 'path'
 
 const prisma = new PrismaClient()
 
-async function generateInvitationCodes(count: number) {
+async function generateInvitationCodes(count: number, createdBy: string) {
   const codes = Array.from({ length: count }, () => uuidv4().slice(0, 8))
 
   await prisma.invitationCode.createMany({
-    data: codes.map(code => ({ code })),
+    data: codes.map(code => ({ code, createdBy })),
     skipDuplicates: true,
   })
 
@@ -21,7 +21,9 @@ async function generateInvitationCodes(count: number) {
 }
 
 // Genera 30 códigos de invitación
-generateInvitationCodes(30)
+// Note: You need to provide a valid user ID for the createdBy parameter
+const ADMIN_USER_ID = 'your-admin-user-id-here' // Replace this with an actual user ID
+generateInvitationCodes(30, ADMIN_USER_ID)
   .catch(e => {
     console.error('Error al generar códigos de invitación:', e)
     process.exit(1)

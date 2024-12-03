@@ -1,106 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { cookies } from 'next/headers';
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/auth"
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
-  console.log('Invitation API route called in production');
+  const session = await getServerSession(authOptions)
+
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
   try {
-    const { action, code } = await req.json();
-    console.log('Received action:', action, 'code:', code);
+    const { action, code, userId } = await req.json();
 
     if (action === 'validate') {
-      return await prisma.$transaction(async (tx) => {
-        console.log('Starting invitation code validation');
-        console.log('Searching for invitation code:', code);
-        const invitationCode = await tx.invitationCode.findFirst({
-          where: { 
-            code,
-            isUsed: false,
-          },
-          select: {
-            id: true
-          }
-        });
-        
-        console.log('Invitation code found:', invitationCode);
-        
-        if (!invitationCode) {
-          console.log('Invalid or used invitation code');
-          return NextResponse.json({ valid: false, error: 'Código de invitación inválido o ya utilizado' });
-        }
-
-        const cookieStore = await cookies();
-        let userId = cookieStore.get('userId')?.value;
-        console.log('Current userId from cookie:', userId);
-
-        if (!userId) {
-          console.log('Creating new user');
-          const newUser = await tx.user.create({
-            data: {
-              email: `temp_${uuidv4()}@example.com`,
-              externalId: uuidv4(),
-              isSubscribed: true,
-              subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            },
-          });
-          userId = newUser.id;
-          console.log('New user created:', userId);
-        } else {
-          console.log('Updating existing user');
-          await tx.user.update({
-            where: { id: userId },
-            data: { 
-              isSubscribed: true,
-              subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-            },
-          });
-        }
-
-        console.log('Updating invitation code');
-        try {
-          await tx.invitationCode.update({
-            where: { id: invitationCode.id },
-            data: { 
-              usedBy: userId,
-              usedAt: new Date(),
-              isUsed: true
-            },
-          });
-        } catch (updateError) {
-          if (updateError instanceof Error && 'code' in updateError && updateError.code === 'P2002') {
-            console.log('Invitation code already used by another user');
-            return NextResponse.json({ valid: false, error: 'El código de invitación ya ha sido utilizado' });
-          }
-          throw updateError;
-        }
-
-        console.log('Invitation code successfully used');
-        const response = NextResponse.json({ 
-          valid: true, 
-          message: '¡Bienvenido a Premium! Tu suscripción ha sido activada.'
-        });
-        response.cookies.set('userId', userId, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 30 * 24 * 60 * 60,
-        });
-
-        return response;
-      }, {
-        isolationLevel: 'Serializable'
+      const invitationCode = await prisma.invitationCode.findUnique({
+        where: { code: code }
       });
-    }
 
-    console.log('Invalid action:', action);
-    return NextResponse.json({ error: 'Acción inválida' }, { status: 400 });
+      if (!invitationCode) {
+        return NextResponse.json({ valid: false, error: 'Código de invitación no encontrado' });
+      }
+
+      if (invitationCode.isUsed) {
+        return NextResponse.json({ valid: false, error: 'Código de invitación ya utilizado' });
+      }
+
+      await prisma.invitationCode.update({
+        where: { id: invitationCode.id },
+        data: { isUsed: true, usedBy: userId, usedAt: new Date() }
+      });
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { 
+          subscriptionTier: 'PREMIUM',
+          subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+        }
+      });
+
+      return NextResponse.json({ valid: true });
+    } else if (action === 'generate') {
+      const newCode = uuidv4().slice(0, 8);
+      const invitationCode = await prisma.invitationCode.create({
+        data: {
+          code: newCode,
+          createdBy: session.user.id, // Add this line to set the createdBy field
+        },
+      });
+
+      return NextResponse.json({ code: invitationCode.code });
+    } else {
+      return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
+    }
   } catch (error) {
-    console.error('Error processing invitation:', error);
-    return NextResponse.json({ 
-      error: 'Error al procesar la invitación',
-      details: error instanceof Error ? error.message : 'Error desconocido'
-    }, { status: 500 });
+    console.error('Error en la ruta de invitación:', error);
+    return NextResponse.json({ error: 'Error al procesar la solicitud de invitación' }, { status: 500 });
   }
 }
 

@@ -21,7 +21,16 @@ export async function POST(request: Request) {
     const updatedUser = await prisma.user.upsert({
       where: { email },
       update: { isVIP: true },
-      create: { email, isVIP: true, externalId: email },
+      create: {
+        email,
+        isVIP: true,
+        externalId: email,
+        password: '', // Add an empty password field
+        name: 'VIP User', // Add a default name
+        role: 'USER', // Add a default role
+        subscriptionTier: 'FREE', // Add a default subscription tier
+        points: 0, // Add default points
+      },
     });
 
     return NextResponse.json({ user: updatedUser.email });

@@ -168,3 +168,20 @@ export async function fetchPaymentInfoFromMercadoPago(paymentId: string) {
   }
 }
 
+// New function to handle subscription updates
+export async function updateUserSubscription(userId: string): Promise<boolean> {
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        subscriptionTier: 'PREMIUM',
+        subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      },
+    });
+    return true;
+  } catch (error) {
+    console.error('Error updating user subscription:', error);
+    return false;
+  }
+}
+

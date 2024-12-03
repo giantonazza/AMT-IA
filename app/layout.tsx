@@ -1,52 +1,35 @@
-import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "./globals.css";
-
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
+import { Metadata } from 'next'
+import { Providers } from "@/components/Providers"
+import { ClientWrapper } from "@/components/ClientWrapper"
+import { Header } from "@/components/Header"
+import { Footer } from "@/components/Footer"
+import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "AMT IA - Tu asistente de IA personal",
-  description: "AMT IA es tu asistente de inteligencia artificial personal, creado por Giancarlo Tonazza en Uruguay.",
-  manifest: "/manifest.json",
-};
-
-export const viewport = {
-  themeColor: "#000000",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-};
+  title: 'AMT IA - Asistente de IA',
+  description: 'La Primera Aplicación de IA creada en Uruguay',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="es">
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-        <link rel="manifest" href="/manifest.json" />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang="es" suppressHydrationWarning>
+      <body className="flex flex-col min-h-screen bg-gradient-to-br from-gray-900 to-purple-900 text-gray-100">
+        <ClientWrapper>
+          <Providers>
+            <Header />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+          </Providers>
+        </ClientWrapper>
       </body>
     </html>
-  );
+  )
 }
+
 

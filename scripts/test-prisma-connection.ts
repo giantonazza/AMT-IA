@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma'
+import bcrypt from 'bcryptjs'
 
 async function main() {
   try {
@@ -10,14 +11,19 @@ async function main() {
     const userCount = await prisma.user.count()
     console.log(`Número de usuarios en la base de datos: ${userCount}`)
 
+    // Hash the password
+    const hashedPassword = await bcrypt.hash('testpassword', 10)
+
     // Crear un usuario de prueba
     const testUser = await prisma.user.create({
       data: {
         email: 'test@example.com',
         name: 'Test User',
         externalId: 'test-external-id',
-        isSubscribed: false,
-        points: 0
+        subscriptionTier: 'FREE',
+        points: 0,
+        password: hashedPassword,
+        role: 'USER'
       }
     })
     console.log('Usuario de prueba creado:', testUser)

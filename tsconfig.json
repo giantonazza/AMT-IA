@@ -8,7 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
+    "module": "commonjs",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -20,7 +20,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "punycode": ["./lib/punycode-shim.ts"]
     },
     "baseUrl": ".",
     "typeRoots": ["./node_modules/@types", "./types"],
@@ -45,9 +46,17 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
+    "types/**/*.ts",
     "prisma/**/*.ts",
-    "global.d.ts"
+    "global.d.ts",
+    "scripts/**/*.ts",
+    "lib/punycode-shim.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
 }
 

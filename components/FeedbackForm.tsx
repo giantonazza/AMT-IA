@@ -48,6 +48,7 @@ export function FeedbackForm({ onSubmit }: FeedbackFormProps) {
       />
       <Button type="submit" disabled={!rating}>Enviar retroalimentación</Button>
     </form>
-  );
+  )
 }
+
 

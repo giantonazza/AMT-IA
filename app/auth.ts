@@ -1,83 +1,87 @@
-import NextAuth from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-import bcrypt from "bcrypt"
+import { NextAuthOptions } from "next-auth"
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import prisma from "@/lib/prisma"
-import { AuthOptions } from "next-auth"
+import CredentialsProvider from "next-auth/providers/credentials"
+import bcrypt from "bcryptjs"
 
-export const authOptions: AuthOptions = {
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: 'Credentials',
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null
+          throw new Error('Please enter an email and password')
         }
 
         const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
+          where: { email: credentials.email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            password: true,
+            role: true,
+            subscriptionTier: true,
+            points: true,
+            externalId: true
           }
         })
 
-        if (!user) {
-          return null
+        if (!user || !user.password) {
+          throw new Error('No user found')
         }
 
-        // Check if the user has a password set
-        if (!user.password) {
-          console.error("User found but no password set")
-          return null
-        }
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
 
-        const isCorrectPassword = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isCorrectPassword) {
-          console.error("Invalid password")
-          return null
+        if (!isPasswordValid) {
+          throw new Error('Invalid password')
         }
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role === 'ADMIN' ? 'ADMIN' : 'USER', // Ensure role is either 'ADMIN' or 'USER'
+          subscriptionTier: user.subscriptionTier,
+          points: user.points,
+          externalId: user.externalId
         }
       }
     })
   ],
+  pages: {
+    signIn: '/auth/signin',
+  },
   session: {
-    strategy: 'jwt',
+    strategy: "jwt"
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.role = user.role
+        token.subscriptionTier = user.subscriptionTier
+        token.points = user.points
+        token.externalId = user.externalId
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
+        session.user.role = token.role as 'ADMIN' | 'USER'
+        session.user.subscriptionTier = token.subscriptionTier as 'FREE' | 'PREMIUM'
+        session.user.points = token.points as number
+        session.user.externalId = token.externalId as string
       }
       return session
     },
   },
-  pages: {
-    signIn: '/auth/signin',
-  },
-}
-
-export default NextAuth(authOptions)
-
-import { getServerSession } from "next-auth/next"
-
-export async function getSession() {
-  return await getServerSession(authOptions)
+  secret: process.env.NEXTAUTH_SECRET,
 }
 

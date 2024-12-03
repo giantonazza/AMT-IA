@@ -14,7 +14,7 @@ export function startCleanupJob() {
       // Eliminar usuarios no suscritos que han expirado
       await prisma.user.deleteMany({
         where: {
-          isSubscribed: false,
+          subscriptionTier: 'FREE',
           expiresAt: {
             lt: now
           }
@@ -24,7 +24,7 @@ export function startCleanupJob() {
       // Eliminar usuarios no suscritos que no han accedido en los últimos 30 días
       await prisma.user.deleteMany({
         where: {
-          isSubscribed: false,
+          subscriptionTier: 'FREE',
           lastAccessAt: {
             lt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
           }

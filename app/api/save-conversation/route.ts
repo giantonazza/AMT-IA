@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
           id: userId,
           externalId: externalId,
           email: `temp_${externalId}@example.com`,
-          isSubscribed: false,
+          subscriptionTier: 'FREE',
           password: '', // Add an empty password field to satisfy Prisma schema
         },
       });

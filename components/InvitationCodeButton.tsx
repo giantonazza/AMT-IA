@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useSession } from "next-auth/react"
 
 interface InvitationCodeButtonProps {
   onSuccess: () => void;
@@ -16,10 +17,10 @@ interface InvitationCodeButtonProps {
 export const InvitationCodeButton: React.FC<InvitationCodeButtonProps> = ({ onSuccess, showToast }) => {
   const [invitationCode, setInvitationCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { data: session } = useSession();
 
   const handleInvitationCode = async () => {
     if (!invitationCode.trim()) {
-      console.log('Empty invitation code submitted');
       showToast({
         title: 'Error',
         description: 'Por favor, ingrese un código de invitación.',
@@ -30,24 +31,19 @@ export const InvitationCodeButton: React.FC<InvitationCodeButtonProps> = ({ onSu
 
     setIsSubmitting(true);
     try {
-      console.log('Sending invitation code validation request:', invitationCode);
       const response = await fetch('/api/invitation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'validate', code: invitationCode }),
+        body: JSON.stringify({ action: 'validate', code: invitationCode, userId: session?.user?.id }),
       });
-      console.log('Received response:', response.status, response.statusText);
       const data = await response.json();
-      console.log('Response data:', data);
       if (data.valid) {
-        console.log('Invitation code validated successfully');
         onSuccess();
         showToast({
           title: '¡Bienvenido a Premium!',
           description: 'Has sido suscrito exitosamente. Disfruta de tus beneficios premium.',
         });
       } else {
-        console.log('Invalid invitation code:', data.error);
         showToast({
           title: 'Código de invitación inválido',
           description: data.error || 'Por favor, verifica el código e intenta nuevamente.',
@@ -58,7 +54,7 @@ export const InvitationCodeButton: React.FC<InvitationCodeButtonProps> = ({ onSu
       console.error('Error validating invitation code:', error);
       showToast({
         title: 'Error',
-        description: 'Hubo un problema al validar el código. Por favor, intenta de nuevo.',
+        description: error instanceof Error ? error.message : 'Hubo un problema al validar el código. Por favor, intenta de nuevo.',
         variant: 'destructive',
       });
     } finally {

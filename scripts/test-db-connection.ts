@@ -1,31 +1,38 @@
 import prisma from '../lib/prisma'
+import bcrypt from 'bcrypt'
+import { v4 as uuidv4 } from 'uuid'
 
 async function main() {
   try {
-    // Intenta obtener todos los usuarios
+    // Attempt to get all users
     const users = await prisma.user.findMany()
-    console.log('Conexión exitosa. Usuarios en la base de datos:', users.length)
+    console.log('Successful connection. Users in the database:', users.length)
 
-    // Intenta crear un nuevo usuario de prueba
+    // Hash the password before creating the user
+    const hashedPassword = await bcrypt.hash('testpassword', 10)
+    
+    // Attempt to create a new test user
     const testUser = await prisma.user.create({
       data: {
         email: 'test@example.com',
         name: 'Test User',
-        externalId: 'test-external-id',
-        isSubscribed: false,
+        password: hashedPassword,
+        externalId: uuidv4(),
+        subscriptionTier: 'FREE',
+        role: 'USER',
         points: 0
       }
     })
-    console.log('Usuario de prueba creado:', testUser)
+    console.log('Test user created:', testUser)
 
-    // Elimina el usuario de prueba
+    // Delete the test user
     await prisma.user.delete({
       where: { id: testUser.id }
     })
-    console.log('Usuario de prueba eliminado')
+    console.log('Test user deleted')
 
   } catch (error) {
-    console.error('Error al conectar con la base de datos:', error)
+    console.error('Error connecting to the database:', error)
   } finally {
     await prisma.$disconnect()
   }

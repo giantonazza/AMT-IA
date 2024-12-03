@@ -1,12 +1,10 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 
-// WARNING: Only enable dangerouslyAllowBrowser in development environments
-// In production, always use server-side API calls to protect your API key
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
-  dangerouslyAllowBrowser: isDevelopment, // Only true in development
+  dangerouslyAllowBrowser: isDevelopment,
 });
 
 interface Message {
